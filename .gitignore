@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Local budget ledger (spend data stays out of the public repo)
+state/
+
+# Generated artefacts; published hashes are committed, tables are not
+build/
+*.rtbw
+*.rtbz
