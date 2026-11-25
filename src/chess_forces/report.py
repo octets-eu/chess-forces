@@ -11,7 +11,6 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "reports"
 PROGRAMS = ROOT / "programs"
 TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
-NETS = ((8,), (16,), (32,), (64,), (128,), (16, 16))
 PROGRAM_NAMES = {
     "always_win": "always win",
     "square": "rule of the square",
@@ -49,11 +48,11 @@ def pareto(points: list[Point]) -> list[Point]:
     return front
 
 
-def build(nets=NETS, leaves=TREE_LEAVES) -> Report:
+def build(leaves=TREE_LEAVES) -> Report:
     task = score.kpk_task()
     points = list(baselines.table_points())
     points += baselines.tree_points(task, leaves)
-    points += baselines.mlp_points(task, nets)
+    points += baselines.net_points(task)
     for path, label in PROGRAM_NAMES.items():
         points.append(
             baselines.program_point(
@@ -136,8 +135,12 @@ def _markdown(report: Report) -> str:
             "Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come "
             "from decompression time (rough), because a single position needs the whole file unpacked. "
             "Learned baselines are trained on all positions and their exceptions are charged. The decision "
-            "trees are written as DSL programs; the nets use 8-bit weights and count operations from their "
-            "layer sizes. Seeds are fixed; results may change slightly with another scikit-learn build."
+            "trees are written as DSL programs. The nets (src/chess_forces/nets.py) look up one row per square or "
+            "square pair, add the rows and apply a small output layer; weights are integers, stored in "
+            "baselines/nets and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an "
+            "adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); "
+            "tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 "
+            "operations too, but 24,576 bytes of memory, against at most a few KB for the nets."
         ),
         "",
         (
@@ -226,7 +229,7 @@ def _plot(report: Report, path: Path) -> None:
     ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda v, _: f"{v:,.0f}"))
     ax.set_xlim(14, 900_000)
-    ax.set_ylim(2_300, 32_000)
+    ax.set_ylim(min(p.bytes_total for p in report.points) * 0.75, 32_000)
     ax.grid(True, which="major", color=GRID, lw=0.8, zorder=0)
     ax.set_xlabel("Operations per position, worst case (64-bit word operations)")
     ax.set_ylabel("Total bytes (program or model, plus exceptions)")
@@ -239,21 +242,24 @@ def _plot(report: Report, path: Path) -> None:
         "bitbase (all slots)": (9, 4, "left"),
         "always win": (9, 4, "left"),
         "rule of the square": (9, 4, "left"),
-        "decision tree, 64 leaves": (-9, -4, "right"),
-        "decision tree, 128 leaves": (-9, -14, "right"),
-        "net 8": (-8, -14, "right"),
-        "human rules": (9, 8, "left"),
+        "decision tree, 64 leaves": (9, -4, "left"),
+        "human rules": (9, 6, "left"),
         "evolved, 256 ops": (9, -14, "left"),
         "evolved, 1,024 ops": (9, 6, "left"),
-        "net 16": (9, 4, "left"),
-        "net 32": (9, 4, "left"),
-        "net 64": (9, -14, "left"),
-        "net 128": (9, 4, "left"),
         "lzma of the bitbase": (9, 6, "left"),
+        "net pairs3 additive, 5 bit": (9, -14, "left"),
+        "net relative3 14 hidden, 4 bit": (9, -4, "left"),
+    }
+    tier_best = {
+        min(
+            (q for q in report.points if q.kind == "learned" and q.ops_max <= t),
+            key=lambda q: q.bytes_total,
+        ).name
+        for t in dsl.TIERS
     }
     for p in report.points:
-        if p.name in labels and p.ops_max is not None:
-            dx, dy, ha = labels[p.name]
+        if (p.name in labels or p.name in tier_best) and p.ops_max is not None:
+            dx, dy, ha = labels.get(p.name, (9, -4, "left"))
             text = p.name + (" (operations estimated)" if p.estimated_ops else "")
             ax.annotate(
                 text,

@@ -6,7 +6,6 @@ formula (the net) gives their operation counts. Everything learned is trained on
 exceptions charge every mistake, so there is nothing to overfit to.
 """
 
-import itertools
 import lzma
 import math
 import os
@@ -16,8 +15,8 @@ from pathlib import Path
 
 import numpy as np
 
-from . import kpk, score
-from .dsl import EXCEPTION_LOOKUP_OPS, Position
+from . import kpk, nets, score
+from .dsl import TIERS, Position
 
 SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", Path(__file__).resolve().parents[3] / "syzygy"))
 
@@ -35,6 +34,7 @@ class Point:
     exact: bool
     note: str = ""
     detail: str = ""  # program text or architecture
+    state_bytes: int | None = None  # decoded size held in memory, where it matters
 
     @property
     def bytes_total(self) -> float:
@@ -84,6 +84,7 @@ def table_points(win: dict | None = None) -> list[Point]:
             True,
             "hand-counted: 5 operations to find the pawn index, 4 loads, 6 to combine, 5 for the read",
             f"{len(packed)} bytes",
+            len(packed),
         )
     ]
     syzygy = SYZYGY_DIR / "KPvK.rtbw"
@@ -235,81 +236,39 @@ def tree_points(
     return out
 
 
-# --- small neural net ----------------------------------------------------------------------------
+# --- table nets (trained by nets.py, saved as integers) --------------------------------------------
 
 
-def mlp_points(
-    task: score.Task, hidden=((8,), (16,), (32,), (64,), (16, 16)), seed: int = 0, epochs: int = 60
-) -> list[Point]:
-    """Integer inputs, one or two ReLU layers, 8-bit weights. Size is one byte per parameter plus
-    4 bytes of scale per layer; operations are counted per position from the formula in _mlp_ops."""
-    from sklearn.neural_network import MLPClassifier
-
-    men = np.array([[p.K, p.k, p.P, p.tempo] for p in task.positions])
-    K, k, P, tempo = men.T
-    raw = np.stack([K & 7, K >> 3, k & 7, k >> 3, P & 7, P >> 3, tempo], axis=1).astype(float)
-    mean, scale = raw.mean(0), raw.std(0) + 1e-9
-    x, y = (raw - mean) / scale, np.array(task.truth)
+def net_points(task: score.Task) -> list[Point]:
+    """Saved nets, evaluated exactly on all positions: those on their own frontier and the best per tier."""
+    results = [nets.evaluate(nets.load(p), task) for p in sorted(nets.NETS_DIR.glob("*.npz"))]
+    keep = {r.digest for r in nets.frontier(results)}
+    for tier in TIERS:
+        fits = [r for r in results if r.ops <= tier]
+        if fits:
+            keep.add(min(fits, key=lambda r: r.total).digest)
     out = []
-    for h in hidden:
-        net = MLPClassifier(
-            h,
-            activation="relu",
-            random_state=seed,
-            max_iter=epochs,
-            batch_size=512,
-            learning_rate_init=3e-3,
-            early_stopping=False,
-        )
-        net.fit(x, y)
-        weights = [w.copy() for w in net.coefs_]
-        biases = [b.copy() for b in net.intercepts_]
-        # fold the input scaling into the first layer, then quantise every layer to 8 bits
-        weights[0] = weights[0] / scale[:, None]
-        biases[0] = biases[0] - (mean / scale) @ net.coefs_[0]
-        wq, bq = [], []
-        for w, b in zip(weights, biases, strict=True):
-            s = np.abs(w).max() / 127
-            bs = np.abs(b).max() / 127 if np.abs(b).max() > 0 else 1.0
-            wq.append(np.round(w / s) * s)
-            bq.append(np.round(b / bs) * bs)
-        a = raw
-        for i, (w, b) in enumerate(zip(wq, bq, strict=True)):
-            a = a @ w + b
-            if i < len(wq) - 1:
-                a = np.maximum(a, 0)
-        errors = int(((a[:, 0] > 0) != y).sum())
-        params = sum(w.size + b.size for w, b in zip(wq, bq, strict=True))
-        size = params + 8 * len(wq)
-        n, k_err = task.n, errors
-        exc = score.exception_bits(n, k_err) / 8 if k_err else 0.0
-        ops = _mlp_ops(h) + (EXCEPTION_LOOKUP_OPS if k_err else 0)
+    for r in sorted(results, key=lambda r: r.ops):
+        if r.digest not in keep:
+            continue
+        shape = f"{r.hidden} hidden" if r.hidden else "additive"
         out.append(
             Point(
-                f"net {'x'.join(map(str, h))}",
+                f"net {r.family} {shape}, {r.bits} bit",
                 "learned",
-                size,
-                exc,
-                errors,
-                ops,
-                ops,
+                r.model_bytes,
+                r.exception_bytes,
+                r.errors,
+                r.ops,
+                r.ops,
                 False,
                 False,
-                f"8-bit weights, {params} parameters; operations from layer sizes",
-                f"7-{'-'.join(map(str, h))}-1",
+                "table lookups plus a small output layer, integer weights, quantisation-aware training",
+                f"digest {r.digest}",
+                r.state_bytes,
             )
         )
     return out
-
-
-def _mlp_ops(hidden) -> int:
-    """Loads (3 squares, tempo) 4, file and rank of each 6, multiply-add 2 per weight, activation and
-    bias per unit 1 each, final comparison 1."""
-    dims = [7, *hidden, 1]
-    ops = 4 + 6
-    for a, b in itertools.pairwise(dims):
-        ops += 2 * a * b + 2 * b  # weights, then bias add and activation per unit
-    return ops + 1
 
 
 # --- putting it together -------------------------------------------------------------------------
@@ -329,7 +288,7 @@ __all__ = [
     "FEATURES",
     "Point",
     "Position",
-    "mlp_points",
+    "net_points",
     "program_point",
     "table_points",
     "tree_points",

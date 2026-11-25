@@ -194,8 +194,9 @@ class Guard:
                 """
             )
             columns = {r[1] for r in db.execute("pragma table_info(calls)")}
-            if "run" not in columns:
-                db.execute("alter table calls add column run text")
+            for name in ("run", "usage"):
+                if name not in columns:
+                    db.execute(f"alter table calls add column {name} text")
 
     @contextmanager
     def _tx(self):
@@ -261,6 +262,30 @@ class Guard:
             ).fetchall()
         return [(k, json.loads(v)) for k, v in rows]
 
+    def usage_totals(self) -> dict:
+        """Token totals of this run's settled calls (calls made before usage was logged are left out)."""
+        with self._tx() as db:
+            rows = db.execute(
+                "select usage, nusd from calls where run = ? and status = 'settled' and usage is not null",
+                (self.run_name,),
+            ).fetchall()
+        fields = (
+            "input_tokens",
+            "cache_creation_input_tokens",
+            "cache_read_input_tokens",
+            "output_tokens",
+        )
+        out = {"calls": len(rows), "nusd": sum(r[1] for r in rows), "thinking_tokens": 0}
+        out.update(dict.fromkeys(fields, 0))
+        for text, _ in rows:
+            u = json.loads(text)
+            for f in fields:
+                out[f] += u.get(f) or 0
+            out["thinking_tokens"] += (u.get("output_tokens_details") or {}).get(
+                "thinking_tokens"
+            ) or 0
+        return out
+
     def run_spent(self) -> int:
         with self._tx() as db:
             return self._run_spent(db)
@@ -317,10 +342,13 @@ class Guard:
             )
             return cur.lastrowid
 
-    def _settle(self, call_id: int, nusd: int, key: str, value, status: str = "settled") -> None:
+    def _settle(
+        self, call_id: int, nusd: int, key: str, value, status: str = "settled", usage=None
+    ) -> None:
         with self._tx() as db:
             db.execute(
-                "update calls set status = ?, nusd = ? where id = ?", (status, nusd, call_id)
+                "update calls set status = ?, nusd = ?, usage = ? where id = ?",
+                (status, nusd, json.dumps(usage) if usage is not None else None, call_id),
             )
             if status == "settled":
                 db.execute(
@@ -381,7 +409,7 @@ class Guard:
             except UnpricedUsage as e:
                 print(f"budget: {e}; counted at the worst case", file=sys.stderr)
                 nusd = worst
-            self._settle(call_id, nusd, key, value)
+            self._settle(call_id, nusd, key, value, usage=usage)
             return value
         finally:
             with self._lock:

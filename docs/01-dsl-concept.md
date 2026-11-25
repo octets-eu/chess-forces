@@ -1,6 +1,6 @@
 # Concept note 01: a DSL of forces on a fixed field
 
-Status: D1–D6 decided (D1–D5 approved 2026-11-25). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, plot and the human rule set exist (reports/kpk.md); next is the single-user agent loop. Figures marked *measured* come from throwaway scripts run on 2026-11-25 against the local Syzygy tables; they will be redone as tested code after approval. Everything else is design or, where marked, speculation.
+Status: D1–D6 decided (D1–D5 approved 2026-11-25). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, plot and the human rule set exist (reports/kpk.md), and the agent loop has run once ([02](02-agent-loop.md)). Current status: [STATUS.md](STATUS.md). Figures marked *measured* came from throwaway scripts on 2026-11-25; the KPK table, the rule of the square and the scorer are now covered by tests. Everything else is design or, where marked, speculation.
 
 ## The idea in one paragraph
 
@@ -19,16 +19,16 @@ The board is a fixed graph of 64 squares. A piece does not "do" anything on it; 
 | Errors allowed to beat Syzygy, before paying for the program | about 12,131 (92.7% accuracy) | the first real target |
 | Errors allowed to beat lzma, before paying for the program | about 4,064 (97.5% accuracy) | the second real target |
 
-So the brief's "beating the 24 KB bitbase is likely" is true but too easy. The first baselines (reports/kpk.md, 2026-11-25) raise the bar further: small learned models already beat Syzygy's size, so a force program has to beat the best point at each operation tier:
+So the brief's "beating the 24 KB bitbase is likely" is true but too easy. The first baselines (reports/kpk.md, 2026-11-25, with scikit-learn nets) put the bar at 5,670 B for 256 operations. A second, tuned set of baselines (table nets, quantisation-aware, integer weights) moved it to **2,178 B at 235 operations**, with 530 errors. That replaces the earlier bar and makes the first search result look worse than it was reported at first:
 
 | Tier | Best total so far | Method |
 | ---: | ---: | --- |
-| 64 | 15,028 B | decision tree, 2 leaves |
-| 256 | 5,670 B | neural net, 8 hidden units, 8-bit weights |
-| 1,024 | 3,105 B | neural net, 32 hidden units |
-| 4,096 | 2,837 B | neural net, 64 hidden units |
+| 64 | 5,681 B | net with additive pair tables, 5-bit weights |
+| 256, 1,024, 4,096 | 2,178 B | table net, 14 hidden units, 4-bit weights, 235 operations |
 
-The hand-written rule set (`programs/human.dsl`: rule of the square, key squares, rook-pawn corner, loose pawn; 80 B of program, 7,590 errors, 5,639 B) was the first force program on the frontier. The search run r1 (2026-11-25, 1,076 proposals by Haiku 5.5) then produced `programs/evolved-256.dsl`: 5,367 B at 232 operations, below the best other method at that tier (the 8-unit net, 5,670 B), and `programs/evolved-1024.dsl`: 4,459 B at 959 operations. At 1,024 and 4,096 operations the nets still lead (3,105 B and 2,837 B). Verified against Syzygy position by position. What the winning programs use is mostly known chess: opposition, the rook-pawn corner, pawn support, blockade and captures; the new structure is the search finding compact combinations of them, not new concepts yet.
+Force programs, for comparison: human rules 5,639 B (273 operations, hand-tuned), evolved (run r1) 5,367 B (232 operations) and 4,459 B (959 operations). The claim in an earlier version of this note, that r1 beat the best other method at 256 operations, compared it with a weak net and does not hold against the tuned ones.
+
+Both were verified against Syzygy position by position. What they use is mostly known chess: opposition, the rook-pawn corner, pawn support, blockade and captures; the search found compact combinations of these ideas, not new concepts.
 
 ## Types
 
@@ -113,7 +113,7 @@ The clone at `../repos/funsearch` implements that method for other problems. Rea
 
 Worth reusing: the island and cluster database in `programs_database.py` (score-signature clusters, softmax sampling with a temperature schedule, shorter programs preferred, reset of the weaker half of the islands). It is Apache-2.0, so Phase 2 can adapt it with the notice kept. Nothing has been built yet, so this choice is open until then. No container is needed either, because the interpreter never runs foreign code.
 
-## Decisions I need from you
+## Decisions taken
 
 | # | Question | Recommendation |
 | --- | --- | --- |
@@ -124,4 +124,4 @@ Worth reusing: the island and cluster database in `programs_database.py` (score-
 | D5 | Transfer order | KPK, KQKP, KRKP, KPKP instead of KRK, KBNK, KRKP |
 | D6 | Licence of the public repo | decided 2026-11-25: own rules code, python-chess (GPL-3.0+) only as a dev dependency for tests and the PGN. Licence: MIT |
 
-After approval the order stays as in the brief: KPK table with hash, interpreter with op counter, scorer, baselines and plot, then the human rule set.e
+What followed is in STATUS.md.

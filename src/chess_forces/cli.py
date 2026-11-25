@@ -48,6 +48,15 @@ def _spec(_args) -> int:
     return 0
 
 
+def _train_nets(_args) -> int:
+    from . import nets
+
+    t = time.perf_counter()
+    results = nets.sweep(progress=lambda m: print(m, flush=True))
+    print(f"{len(results)} nets in {time.perf_counter() - t:.0f} s, kept in {nets.NETS_DIR}")
+    return 0
+
+
 def _report(_args) -> int:
     from . import report as rep
 
@@ -64,7 +73,6 @@ def _report(_args) -> int:
 def _evolve(args) -> int:
     from . import score, search
     from .budget import Guard, api_key, default_path, exit_on_budget, usd
-    from .search import SearchStopped
 
     state = default_path().parent
     archive = search.Archive(state / f"search-{args.run}.sqlite")
@@ -74,11 +82,16 @@ def _evolve(args) -> int:
         effort=args.effort,
         model=args.model,
         max_tokens=args.max_tokens,
+        islands=tuple(int(x) for x in args.islands.split(",")),
+        seed=args.seed,
+        repair=not args.no_repair,
+        plateau=args.plateau,
     )
-    evaluator = search.Evaluator(score.kpk_task())
     bars = search.Bars.load(Path(__file__).resolve().parents[2] / "reports" / "kpk.json")
     if args.show_prompt:
-        s = search.Search(settings, Guard(), None, archive, evaluator, bars)
+        s = search.Search(
+            settings, Guard(), None, archive, search.Evaluator(score.kpk_task()), bars
+        )
         s.seed()
         print(s.system + "\n\n=== user prompt, island 0 ===\n\n" + s.user_prompt(0)[0])
         return 0
@@ -86,14 +99,22 @@ def _evolve(args) -> int:
 
     client = anthropic.Anthropic(api_key=api_key(), max_retries=0, timeout=180)
     guard = Guard(run=args.run, run_limit_usd=args.usd)
-    s = search.Search(settings, guard, client, archive, evaluator, bars)
+    evaluator = search.PoolEvaluator("kpk", args.scorers)
+    try:
+        s = search.Search(settings, guard, client, archive, evaluator, bars)
+    except ValueError as e:
+        evaluator.close()
+        print(e, file=sys.stderr)
+        return 1
     with exit_on_budget():
         try:
             s.run(args.units, progress=lambda m: print(m, flush=True))
-        except SearchStopped as e:
+        except search.SearchStopped as e:
             print(f"stopped: {e}", file=sys.stderr)
         finally:
+            evaluator.close()
             print(s.summary())
+            print(s.usage_text())
             out = state / f"run-{args.run}"
             out.mkdir(exist_ok=True)
             for tier, best in archive.best_per_tier().items():
@@ -166,7 +187,17 @@ def main(argv=None) -> int:
     ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")
     ev.add_argument("--usd", required=True, help="hard limit for this run in USD")
     ev.add_argument("--units", type=int, default=None, help="stop after this many proposals")
-    ev.add_argument("--workers", type=int, default=8)
+    ev.add_argument("--workers", type=int, default=24, help="parallel API calls")
+    ev.add_argument("--scorers", type=int, default=10, help="scoring processes")
+    ev.add_argument("--islands", default="64,256,1024,4096", help="operation tier of each island")
+    ev.add_argument(
+        "--plateau",
+        type=int,
+        default=200,
+        help="close an island after this many units without a new best",
+    )
+    ev.add_argument("--no-repair", action="store_true")
+    ev.add_argument("--seed", type=int, default=0)
     ev.add_argument("--effort", default="medium", choices=["low", "medium", "high"])
     ev.add_argument(
         "--max-tokens", type=int, default=9000, help="output limit per call, thinking included"

@@ -5,12 +5,15 @@ raw answers. Everything needed to resume is on disk before the API is called.
 """
 
 import json
+import multiprocessing
 import random
 import re
+import signal
 import sqlite3
 import threading
+import time
 from collections.abc import Callable
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,7 +27,8 @@ class SearchStopped(Exception):
 
 
 DEFAULT_MODEL = "claude-haiku-5-5"
-ISLAND_TIERS = (256, 1024, 1024, 4096)
+ISLAND_TIERS = (64, 256, 1024, 4096)
+LEGACY_ISLANDS = (256, 1024, 1024, 4096)  # run r1, before islands were stored
 MAX_TOKENS = 6000
 SEEDS = ("always_win", "square", "human")
 CODE = re.compile(r"\x60\x60\x60[a-zA-Z]*\n(.*?)\x60\x60\x60", re.DOTALL)
@@ -126,6 +130,7 @@ create table if not exists programs (
     total real not null, prog_bytes real not null, exc_bytes real not null, errors integer not null,
     false_wins integer not null, missed integer not null, ops_max integer not null, tier integer,
     feedback text not null, parents text not null, unit integer, unique (island, hash));
+create table if not exists meta (k text primary key, v text not null);
 create table if not exists units (
     unit integer primary key, island integer not null, key text not null, prompt text not null,
     status text not null, note text not null default '', parents text not null default '[]');
@@ -208,6 +213,26 @@ class Archive:
             "select unit, island, key, prompt from units where status = 'called' order by unit"
         )
 
+    def staleness(self, island: int, max_ops: int) -> int:
+        """Finished units on an island since the one that produced its current best program."""
+        rows = self._rows(
+            "select coalesce(unit, 0) from programs where island = ? and ops_max <= ? order by total, id limit 1",
+            (island, max_ops),
+        )
+        best_unit = rows[0][0] if rows else 0
+        return self._rows(
+            "select count(*) from units where island = ? and unit > ? and status != 'called'",
+            (island, best_unit),
+        )[0][0]
+
+    def meta(self, key: str) -> str | None:
+        rows = self._rows("select v from meta where k = ?", (key,))
+        return rows[0][0] if rows else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        with self._lock:
+            self._db.execute("insert or replace into meta values (?, ?)", (key, value))
+
     def unit_counts(self) -> dict[str, int]:
         return dict(self._rows("select status, count(*) from units group by status"))
 
@@ -253,9 +278,9 @@ class Evaluator:
     def __init__(self, task: score.Task):
         self.task = task
 
-    def evaluate(self, text: str) -> tuple[Scored, score.Report]:
+    def evaluate(self, text: str) -> Scored:
         r = score.score(text, self.task, samples=12, clusters=6)
-        s = Scored(
+        return Scored(
             id=0,
             text=text,
             total=r.bytes_total,
@@ -273,7 +298,41 @@ class Evaluator:
                 ],
             },
         )
-        return s, r
+
+    def close(self) -> None:
+        pass
+
+
+_WORKER: Evaluator | None = None
+
+
+def _init_worker(task_name: str) -> None:
+    global _WORKER
+    signal.signal(signal.SIGINT, signal.SIG_IGN)  # Ctrl-C is handled by the parent
+    _WORKER = Evaluator(score.TASKS[task_name]())
+
+
+def _work(text: str) -> Scored:
+    assert _WORKER is not None
+    return _WORKER.evaluate(text)
+
+
+class PoolEvaluator:
+    """Evaluator in worker processes, so threads that wait for answers do not queue on one core."""
+
+    def __init__(self, task_name: str = "kpk", processes: int = 10):
+        self._pool = ProcessPoolExecutor(
+            processes,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_init_worker,
+            initargs=(task_name,),
+        )
+
+    def evaluate(self, text: str) -> Scored:
+        return self._pool.submit(_work, text).result()
+
+    def close(self) -> None:
+        self._pool.shutdown(cancel_futures=True)
 
 
 def seed_programs() -> dict[str, str]:
@@ -303,7 +362,7 @@ def _block(s: Scored, label: str) -> str:
 
 @dataclass
 class Bars:
-    """Best totals known at each tier from the baseline report (reports/kpk.json)."""
+    """Best totals known at each tier from the baseline report (reports/kpk.json), force programs left out."""
 
     by_tier: dict[int, tuple[float, str]]
 
@@ -314,14 +373,16 @@ class Bars:
         data = json.loads(path.read_text())
         out: dict[int, tuple[float, str]] = {}
         for tier in dsl.TIERS:
-            best = None
-            for p in data["points"]:
-                if p["ops_max"] is None or p["estimated_ops"] or p["ops_max"] > tier:
-                    continue
-                if best is None or p["bytes_total"] < best[0]:
-                    best = (p["bytes_total"], p["name"])
-            if best:
-                out[tier] = best
+            fits = [
+                (p["bytes_total"], p["name"])
+                for p in data["points"]
+                if p["kind"] != "force"
+                and p["ops_max"] is not None
+                and not p["estimated_ops"]
+                and p["ops_max"] <= tier
+            ]
+            if fits:
+                out[tier] = min(fits)
         return cls(out)
 
 
@@ -332,8 +393,26 @@ class Settings:
     effort: str = "medium"
     max_tokens: int = MAX_TOKENS
     islands: tuple[int, ...] = ISLAND_TIERS
-    workers: int = 8
+    workers: int = 24
     seed: int = 0
+    repair: bool = True  # one follow-up call for a program that is invalid or over its limit
+    steer: bool = True  # more calls to islands that still improve; otherwise round-robin
+    plateau: int = 200  # an island closes after this many finished units without a new best
+
+
+class RateLimited(NotBilled):
+    def __init__(self, message: str, after: float):
+        super().__init__(message)
+        self.after = after
+
+
+@dataclass
+class Verdict:
+    """What became of one answer: a scored program, or the reason it was rejected."""
+
+    scored: Scored | None
+    reason: str = ""
+    program: str | None = None  # text worth repairing, if any
 
 
 class Search:
@@ -345,7 +424,7 @@ class Search:
         guard: Guard,
         client,
         archive: Archive,
-        evaluator: Evaluator,
+        evaluator,
         bars: Bars,
     ):
         self.s = settings
@@ -358,23 +437,51 @@ class Search:
         self.system = system_text()
         self._lock = threading.Lock()
         self._pending: list[tuple[int, int, str, str]] = []
+        self._work_of: dict = {}
+        self._budget_wait: BudgetExceeded | None = None
+        self._reported = 0
         self.stopped: Exception | None = None
-        self.stats = {"called": 0, "added": 0, "rejected": 0, "duplicate": 0, "errors": 0}
+        self.stats = dict.fromkeys(
+            ("called", "added", "rejected", "duplicate", "errors", "repaired"), 0
+        )
+        self._check_islands()
+
+    def _check_islands(self) -> None:
+        """A run keeps the islands it was started with."""
+        stored = self.archive.meta("islands")
+        if stored is None:
+            islands = LEGACY_ISLANDS if self.archive.count() else self.s.islands
+            self.archive.set_meta("islands", json.dumps(list(islands)))
+            stored = json.dumps(list(islands))
+        if json.loads(stored) != list(self.s.islands):
+            raise ValueError(f"run {self.s.run!r} was started with islands {stored}")
 
     # --- seeds and prompts ----------------------------------------------------------------------
 
     def seed(self) -> None:
         """Every island starts with the same three programs (idempotent)."""
+        seeds: list[Scored] = []
         for island in range(len(self.s.islands)):
             if self.archive.population(island, 10**9):
                 continue
-            for text in seed_programs().values():
-                s, _ = self.evaluator.evaluate(text)
+            seeds = seeds or [self.evaluator.evaluate(t) for t in seed_programs().values()]
+            for s in seeds:
                 self.archive.add(island, s, None, [])
 
     def tier_ops(self, island: int) -> int:
         """Largest worst-case count a program may have, its exception lookup included."""
         return self.s.islands[island]
+
+    def choose_island(self, unit: int) -> int | None:
+        """The island for the next unit, or None when every island is on its plateau."""
+        n = len(self.s.islands)
+        if not self.s.steer:
+            return (unit - 1) % n
+        stale = [self.archive.staleness(i, self.tier_ops(i)) for i in range(n)]
+        still = [i for i in range(n) if stale[i] < self.s.plateau]
+        if not still:
+            return None
+        return self.rng.choices(still, weights=[1 / (1 + stale[i] / 25) for i in still])[0]
 
     def parents(self, island: int) -> list[Scored]:
         """One parent from the island (rank-weighted); half the time a second from the best programs
@@ -437,12 +544,21 @@ class Search:
         )
         return "\n".join(lines), [p.id for p in pops]
 
+    def repair_prompt(self, prompt: str, program: str, reason: str) -> str:
+        return (
+            f"{prompt}\n\nYour previous answer to exactly this request was rejected.\n"
+            f"\x60\x60\x60python\n{program.strip()}\n\x60\x60\x60\nReason: {reason}\n"
+            "Keep the idea and fix only that. Reply in the same format: at most three sentences, then the program."
+        )
+
     # --- one unit -------------------------------------------------------------------------------
 
-    def new_unit(self) -> tuple[int, int, str, str]:
+    def new_unit(self) -> tuple[int, int, str, str] | None:
         with self._lock:
             unit = self.archive.next_unit()
-            island = (unit - 1) % len(self.s.islands)
+            island = self.choose_island(unit)
+            if island is None:
+                return None
             prompt, parents = self.user_prompt(island, unit)
             key = f"{self.s.run}/{unit}"
             self.archive.add_unit(unit, island, key, prompt, parents)
@@ -468,8 +584,11 @@ class Search:
             except anthropic.APIConnectionError:
                 raise  # unknown whether it was billed: the reservation stays counted
             except anthropic.APIStatusError as e:
+                text = f"{type(e).__name__}: {e.message}"
+                if type(e) is anthropic.RateLimitError:
+                    raise RateLimited(text, _retry_after(e)) from e
                 if 400 <= e.status_code < 500 and e.status_code not in (408, 409):
-                    raise NotBilled(f"{type(e).__name__}: {e.message}") from e
+                    raise NotBilled(text) from e
                 raise
             text = "".join(b.text for b in r.content if b.type == "text")
             return {"text": text, "stop": r.stop_reason, "model": r.model}, r.usage.model_dump()
@@ -477,63 +596,20 @@ class Search:
         return do
 
     def tokens_in(self, prompt: str) -> int:
-        """Upper estimate of input tokens from characters. FEN strings run near 2 characters a token,
-        prose and code well above, so 2 is a safe bound."""
-        return (len(self.system) + len(prompt)) // 2 + 200
+        """Upper estimate of input tokens from characters. Measured on run r1: 1.75 characters a token
+        in user prompts (FEN strings), 2.9 in the system prompt; 1.6 stays below both."""
+        return int((len(self.system) + len(prompt)) / 1.6) + 200
 
-    def process(self, unit: int, island: int, prompt: str, answer: dict) -> str:
-        """Parse, score and store one answer. Returns the unit status."""
-        text = answer.get("text", "")
-        if answer.get("stop") == "refusal":
-            return self._reject(unit, island, "the model refused")
-        try:
-            program = extract(text)
-            scored, _ = self.evaluator.evaluate(program)
-        except DslError as e:
-            return self._reject(unit, island, f"invalid program: {str(e)[:160]}")
-        except OverBudget as e:
-            return self._reject(unit, island, str(e)[:160])
-        except RecursionError:
-            return self._reject(unit, island, "program too deeply nested")
-        limit = self.tier_ops(island)
-        if scored.ops_max > limit:
-            return self._reject(
-                unit, island, f"uses {scored.ops_max:,} operations, limit {limit:,}"
-            )
-        if self.archive.add(island, scored, unit, self.archive.unit_parents(unit)):
-            self.archive.finish_unit(unit, "added")
-            with self._lock:
-                self.stats["added"] += 1
-            return "added"
-        self.archive.finish_unit(unit, "duplicate")
-        with self._lock:
-            self.stats["duplicate"] += 1
-        return "duplicate"
-
-    def _reject(self, unit: int, island: int, note: str) -> str:
-        self.archive.finish_unit(unit, "rejected", note)
-        with self._lock:
-            self.stats["rejected"] += 1
-        return "rejected"
-
-    def one(
-        self,
-        unit: int,
-        island: int,
-        key: str,
-        prompt: str,
-        sleep: Callable[[float], None] | None = None,
-    ) -> str:
-        """One paid unit, with retries for rate limits and server errors."""
-        import time
-
+    def paid(self, key: str, prompt: str, sleep: Callable[[float], None]) -> dict | Exception:
+        """One paid answer, with retries for rate limits and server errors. Returns the last error
+        when they do not help; raises BudgetExceeded and SearchStopped."""
         import anthropic
 
-        sleep = sleep or time.sleep
-        last: Exception | None = None
-        for attempt in range(5):
+        last: Exception = RuntimeError("no attempt")
+        for attempt in range(8):
+            wait_s = min(60.0, 4.0 * 2**attempt)
             try:
-                answer = self.guard.run(
+                return self.guard.run(
                     key,
                     self.s.model,
                     self.tokens_in(prompt),
@@ -541,39 +617,110 @@ class Search:
                     self.call(prompt),
                     cached=True,
                 )
+            except RateLimited as e:
+                last, wait_s = e, max(e.after, wait_s)
             except NotBilled as e:
-                # 4xx: not billed. Rate limits are retried; anything else would fail for every unit.
-                if "RateLimitError" not in str(e):
-                    raise SearchStopped(str(e)) from e
-                last = e
+                raise SearchStopped(str(e)) from e  # would fail the same way for every unit
             except (anthropic.APIError, OSError) as e:
                 last = e  # 5xx, timeouts, connection loss: ambiguous, the reservation stays counted
-            else:
-                with self._lock:
-                    self.stats["called"] += 1
-                return self.process(unit, island, prompt, answer)
-            sleep(min(60, 4 * 2**attempt))
-        self.archive.finish_unit(unit, "error", str(last)[:200])
+                if attempt >= 4:
+                    break
+            sleep(wait_s)
+        return last
+
+    def judge(self, island: int, answer: dict) -> Verdict:
+        if answer.get("stop") == "refusal":
+            return Verdict(None, "the model refused")
+        try:
+            program = extract(answer.get("text", ""))
+        except DslError as e:
+            cut = " (the answer was cut off)" if answer.get("stop") == "max_tokens" else ""
+            return Verdict(None, f"invalid program: {e}{cut}")
+        try:
+            scored = self.evaluator.evaluate(program)
+        except DslError as e:
+            return Verdict(None, f"invalid program: {str(e)[:160]}", program)
+        except OverBudget as e:
+            return Verdict(None, str(e)[:160], program)
+        except RecursionError:
+            return Verdict(None, "program too deeply nested", program)
+        limit = self.tier_ops(island)
+        if scored.ops_max > limit:
+            return Verdict(None, f"uses {scored.ops_max:,} operations, limit {limit:,}", program)
+        return Verdict(scored)
+
+    def store(self, unit: int, island: int, verdict: Verdict) -> str:
+        if verdict.scored is None:
+            status = "rejected"
+            self.archive.finish_unit(unit, status, verdict.reason)
+        else:
+            new = self.archive.add(island, verdict.scored, unit, self.archive.unit_parents(unit))
+            status = "added" if new else "duplicate"
+            self.archive.finish_unit(unit, status)
         with self._lock:
-            self.stats["errors"] += 1
-        return "error"
+            self.stats[status] += 1
+        return status
+
+    def one(
+        self,
+        unit: int,
+        island: int,
+        key: str,
+        prompt: str,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> str:
+        """One unit: an answer, at most one repair, and the result on disk."""
+        answer = self.paid(key, prompt, sleep)
+        if isinstance(answer, Exception):
+            self.archive.finish_unit(unit, "error", str(answer)[:200])
+            with self._lock:
+                self.stats["errors"] += 1
+            return "error"
+        with self._lock:
+            self.stats["called"] += 1
+        verdict = self.judge(island, answer)
+        if self.s.repair and verdict.scored is None and verdict.program is not None:
+            try:
+                fixed = self.paid(
+                    f"{key}/repair",
+                    self.repair_prompt(prompt, verdict.program, verdict.reason),
+                    sleep,
+                )
+            except BudgetExceeded:
+                self.store(unit, island, verdict)
+                raise
+            if not isinstance(fixed, Exception):
+                second = self.judge(island, fixed)
+                if second.scored is not None:
+                    verdict = second
+                    with self._lock:
+                        self.stats["repaired"] += 1
+        return self.store(unit, island, verdict)
 
     # --- running --------------------------------------------------------------------------------
 
     def recover(self) -> int:
         """Finish work that an earlier run paid for, then queue units whose call was interrupted."""
         done = 0
-        stored = {k: v for k, v in self.guard.results(f"{self.s.run}/")}
+        stored = dict(self.guard.results(f"{self.s.run}/"))
         for unit, island, key, prompt in self.archive.open_units():
-            if key in stored:
-                self.process(unit, island, prompt, stored[key])
-                done += 1
-            else:
+            if key not in stored:
                 self._pending.append((unit, island, key, prompt))
+                continue
+            verdict = self.judge(island, stored[key])
+            if verdict.scored is None and f"{key}/repair" in stored:
+                second = self.judge(island, stored[f"{key}/repair"])
+                verdict = second if second.scored is not None else verdict
+            self.store(unit, island, verdict)
+            done += 1
         return done
 
+    def _next(self):
+        return self._pending.pop(0) if self._pending else self.new_unit()
+
     def run(self, max_units: int | None = None, progress: Callable[[str], None] = print) -> None:
-        """Work until the limit, the budget or Ctrl-C. Raises BudgetExceeded at a budget stop."""
+        """Work until a limit, a plateau on every island, the budget or Ctrl-C. Raises BudgetExceeded at
+        a budget stop; the money left is used up first, one call at a time."""
         self.seed()
         recovered = self.recover()
         if recovered:
@@ -585,17 +732,22 @@ class Search:
                 while True:
                     while (
                         self.stopped is None
+                        and self._budget_wait is None
                         and len(running) < self.s.workers
                         and (max_units is None or started < max_units)
                     ):
-                        work = self._pending.pop(0) if self._pending else self.new_unit()
-                        running.add(pool.submit(self.one, *work))
+                        work = self._next()
+                        if work is None:
+                            break
+                        f = pool.submit(self.one, *work)
+                        self._work_of[f] = work
+                        running.add(f)
                         started += 1
                     if not running:
                         break
                     running = self._collect(wait(running, return_when=FIRST_COMPLETED))
-                    total = sum(self.stats.values())
-                    if total and total % 20 == 0:
+                    if sum(self.stats.values()) >= self._reported + 25:
+                        self._reported = sum(self.stats.values())
                         progress(self.summary())
             except KeyboardInterrupt:
                 progress("interrupted: waiting for the calls already running, then stopping")
@@ -603,23 +755,58 @@ class Search:
                 self.stopped = SearchStopped("interrupted by the user")
         if self.stopped:
             raise self.stopped
+        if max_units is None or started < max_units:
+            progress(f"every island is on its plateau ({self.s.plateau} units without a new best)")
 
     def _collect(self, outcome) -> set:
-        """Keep what finished; a budget stop or an unexpected error ends the run, work is on disk."""
+        """Keep what finished. Out of budget: put the unit back and wait for running calls to settle, since
+        each returns the part of its reservation it did not need; stop when nothing is running."""
         finished, running = outcome
+        freed = False
         for f in finished:
+            work = self._work_of.pop(f, None)
             try:
                 f.result()
-            except Exception as e:  # noqa: BLE001
-                if self.stopped is None or not isinstance(e, BudgetExceeded):
-                    self.stopped = e
+                freed = True
+            except BudgetExceeded as e:
+                if work is not None and any(u[0] == work[0] for u in self.archive.open_units()):
+                    self._pending.insert(0, work)
+                self._budget_wait = e
+            except Exception as e:  # noqa: BLE001 - unexpected: stop cleanly, work is on disk
+                self.stopped = self.stopped or e
+        if self._budget_wait is not None:
+            if not running:
+                self.stopped = self.stopped or self._budget_wait
+            elif freed:
+                self._budget_wait = None  # money came back: try again
         return running
 
     def summary(self) -> str:
         best = self.archive.best_per_tier()
         parts = [f"{t}: {p.total:,.0f} B" for t, p in best.items()]
+        st = self.stats
         return (
-            f"{self.stats['called']} answers, {self.stats['added']} added, {self.stats['rejected']} rejected, "
-            f"{self.stats['duplicate']} duplicates, {self.stats['errors']} errors | best {', '.join(parts)} | "
+            f"{st['called']} answers, {st['added']} added, {st['rejected']} rejected, {st['repaired']} repaired, "
+            f"{st['duplicate']} duplicates, {st['errors']} errors | best {', '.join(parts)} | "
             f"run spend {self.guard.run_spent() / 1e9:.3f} USD"
         )
+
+    def usage_text(self) -> str:
+        u = self.guard.usage_totals()
+        if not u["calls"]:
+            return "no usage logged yet"
+        n = u["calls"]
+        prefix = u["cache_read_input_tokens"] + u["cache_creation_input_tokens"]
+        hit = 100 * u["cache_read_input_tokens"] / prefix if prefix else 0
+        return (
+            f"per call over {n} calls: {u['input_tokens'] / n:,.0f} plain input, {u['cache_read_input_tokens'] / n:,.0f} cached, "
+            f"{u['output_tokens'] / n:,.0f} output tokens ({u['thinking_tokens'] / n:,.0f} thinking), cache hits {hit:.0f}%, "
+            f"{u['nusd'] / n / 1e9:.5f} USD"
+        )
+
+
+def _retry_after(e) -> float:
+    try:
+        return float(e.response.headers.get("retry-after", 0))
+    except (TypeError, ValueError):
+        return 0.0
