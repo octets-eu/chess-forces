@@ -1,6 +1,6 @@
 # Concept note 01: a DSL of forces on a fixed field
 
-Status: D1–D6 decided (D1–D5 approved 2026-11-25). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, the bytes/operations plot and the human rule set come next. Figures marked *measured* come from throwaway scripts run on 2026-11-25 against the local Syzygy tables; they will be redone as tested code after approval. Everything else is design or, where marked, speculation.
+Status: D1–D6 decided (D1–D5 approved 2026-11-25). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, plot and the human rule set exist (reports/kpk.md); next is the single-user agent loop. Figures marked *measured* come from throwaway scripts run on 2026-11-25 against the local Syzygy tables; they will be redone as tested code after approval. Everything else is design or, where marked, speculation.
 
 ## The idea in one paragraph
 
@@ -13,13 +13,22 @@ The board is a fixed graph of 64 squares. A piece does not "do" anything on it; 
 | KPK positions, pawn on files a–d, both sides to move | 196,608 slots, **165,676 legal** (32.8% draws) | N for the scorer |
 | Raw bitbase | 24,576 B over slots, 20,710 B over legal positions | the 24 KB in the brief |
 | Syzygy `KPvK.rtbw` | **7,824 B** | the fast, small baseline on disk |
-| lzma of the slot bitbase (illegal = 0; one setting, not tuned) | **3,441 B** | the size to beat if compute is ignored |
+| lzma of the slot bitbase (illegal = 0; one setting, not tuned) | **3.3–3.4 KB** depending on slot order | the size to beat if compute is ignored |
 | Best constant answer ("always win") | 54,394 errors, 18,911 B of exceptions | floor for "no idea" |
 | Rule of the square, one line (below) | 30,006 errors, about 14,133 B of exceptions, 99.3% precise, finds 73.5% of wins | one concept is worth about 4.8 KB by log2 C |
 | Errors allowed to beat Syzygy, before paying for the program | about 12,131 (92.7% accuracy) | the first real target |
 | Errors allowed to beat lzma, before paying for the program | about 4,064 (97.5% accuracy) | the second real target |
 
-So the brief's "beating the 24 KB bitbase is likely" is true but too easy. The honest bars are 7.8 KB and 3.4 KB.
+So the brief's "beating the 24 KB bitbase is likely" is true but too easy. The first baselines (reports/kpk.md, 2026-11-25) raise the bar further: small learned models already beat Syzygy's size, so a force program has to beat the best point at each operation tier:
+
+| Tier | Best total so far | Method |
+| ---: | ---: | --- |
+| 64 | 15,028 B | decision tree, 2 leaves |
+| 256 | 5,670 B | neural net, 8 hidden units, 8-bit weights |
+| 1,024 | 3,105 B | neural net, 32 hidden units |
+| 4,096 | 2,837 B | neural net, 64 hidden units |
+
+The hand-written rule set (`programs/human.dsl`: rule of the square, key squares, rook-pawn corner, loose pawn; 80 B of program, 7,590 errors, 5,639 B) is already on the frontier between the tree and the nets. It was tuned by hand over about 20 scoring runs on the error groups, so it is not an untouched prior.
 
 ## Types
 

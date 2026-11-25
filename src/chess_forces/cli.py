@@ -48,6 +48,19 @@ def _spec(_args) -> int:
     return 0
 
 
+def _report(_args) -> int:
+    from . import report as rep
+
+    t = time.perf_counter()
+    result = rep.build()
+    for path in rep.write(result):
+        print(f"wrote {path}")
+    print(
+        f"{len(result.points)} points, {len(result.frontier)} on the frontier, {time.perf_counter() - t:.0f} s"
+    )
+    return 0
+
+
 def _confirm_tty(amount: str, what: str) -> None:
     if not sys.stdin.isatty():
         sys.exit("Refused: this needs a person at a terminal. Run it yourself, not from a script.")
@@ -99,6 +112,9 @@ def main(argv=None) -> int:
     sc.add_argument("--json", action="store_true")
     sc.set_defaults(fn=_score)
     sub.add_parser("spec", help="print the language").set_defaults(fn=_spec)
+    sub.add_parser(
+        "report", help="baselines, frontier and plot for KPK (about a minute)"
+    ).set_defaults(fn=_report)
     bud = sub.add_parser("budget", help="API spend limits")
     bsub = bud.add_subparsers(dest="cmd", required=True)
     init = bsub.add_parser("init", help="set the limits once")

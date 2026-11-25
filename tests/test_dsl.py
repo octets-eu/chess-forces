@@ -280,7 +280,7 @@ REJECTED = [
     (W + "sq(1)\n", "2 arguments"),
     (W + "all(True for s in occ)\n", "unknown function"),
     (W + "abs(" * 70 + "1" + ")" * 70 + " == 1\n", "deeply nested"),
-    (W + " and ".join(["True"] * 700) + "\n", "too large"),
+    (W + " and ".join(["True"] * 4000) + "\n", "too large"),
     ("import os\ndef wins() -> Bool:\n    return True\n", "list of def"),
     ("def wins() -> Bool:\n    import os\n    return True\n", "Import"),
     ("def wins() -> Bool:\n    while True:\n        pass\n    return True\n", "While"),
@@ -303,7 +303,7 @@ REJECTED = [
         + "    return True\n",
         "statements",
     ),
-    ("x" * 9000, "longer than"),
+    ("x" * 50_000, "longer than"),
     ("def wins() -> Bool:\n    return (\n", "syntax"),
 ]
 
@@ -352,7 +352,7 @@ def test_fingerprint_is_pinned():
     assert dsl.fingerprint() == PINNED
 
 
-PINNED = "09950c6270d21930"
+PINNED = "acd01c74a7d2eb2c"
 
 
 # --- fuzz ----------------------------------------------------------------------------------------

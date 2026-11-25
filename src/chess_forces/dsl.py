@@ -17,7 +17,7 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 
-DSL_VERSION = "0.1"
+DSL_VERSION = "0.2"
 INF = 99
 CAP = 4096
 TIERS = (64, 256, 1024, 4096)
@@ -35,8 +35,8 @@ KINDS = ("any", *PIECES)
 DIRS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 ENUMS: dict[str, tuple[str, ...]] = {"Side": SIDES, "Kind": KINDS, "Piece": PIECES, "Dir": DIRS}
 INT_MIN, INT_MAX = -8, 63
-MAX_SOURCE = 8_000
-MAX_NODES = 600
+MAX_SOURCE = 40_000
+MAX_NODES = 3_000
 MAX_DEPTH = 60
 MAX_BLOCK = 100
 
