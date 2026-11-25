@@ -31,7 +31,38 @@ Imagine you must send a friend all 165,676 answers. You may send:
 
 The friend then knows everything exactly. The total length of both parts is the score, counted in bytes. Smaller is better. One byte is eight yes/no bits. The rule of the square needs 16 bytes for the program and 14,135 bytes for the list of mistakes, together 14,151.
 
-There is a second number: **how much work** the answer takes. We count simple machine steps ("operations") for one position, and report the worst case. A short but very slow answer is not a good answer, so we compare programs of similar speed. Four speed classes exist: 64, 256, 1,024 and 4,096 steps.
+## Three numbers: stored, steps, held
+
+Length alone is not enough. Think of a suitcase, a walk, and a table to work on.
+
+| Number | Picture | Meaning |
+| --- | --- | --- |
+| **Bytes stored** | the packed suitcase | Everything you must send: the program (or net, or table) plus the list of mistakes. This is the "total length" above. |
+| **Steps** | the walk to one answer | Simple machine steps (an addition, a comparison, reading one number) needed for one position. We report the worst case. |
+| **Bytes held** | the table you unpack the suitcase on | What must be unpacked and kept in memory before the first answer. Data that can be read directly from its stored form does not count. |
+
+All three matter, because each one alone can be cheated:
+
+- Only *stored*: a tiny program that replays all possible games is very short, but needs an enormous number of steps.
+- Only *steps*: a plain list of all answers needs 20 steps, but 24,576 bytes stored.
+- Without *held*: a compressed list is only 3,341 bytes stored, and once it is unpacked an answer takes 20 steps. But unpacked it is the plain list again, 24,576 bytes on the table. That is memory, not understanding.
+
+The same methods, with all three numbers:
+
+| Method | Bytes stored | Steps (worst case) | Bytes held |
+| --- | ---: | ---: | ---: |
+| Plain list of answers | 24,576 | 20 | 0 (read directly) |
+| Compressed list (lzma), unpacked once | 3,341 | 20 | 24,576 |
+| Best small neural network | 2,178 | 235 | 7,534 |
+| Best program the AI found (fast) | 5,367 | 232 | about 470 |
+| Human rules | 5,639 | 273 | about 250 |
+| Rule of the square | 14,151 | 70 | about 50 |
+
+How we count *held*: a net holds one byte for each of its numbers; a program holds about 2 bytes for each of its building blocks (the fast program has 234). The list of mistakes is not counted as held, because single entries can be looked up in the packed list; we charge 32 steps for that. Both are choices, not laws of nature.
+
+How much may be held? The plan (not built yet): no single fixed limit. A hard limit could throw away a good solution that is one byte too large, so results will be shown at several limits, with near misses listed next to them, and programs over a limit will be kept and looked at again. Which limit is used matters: with little memory allowed our programs look better, with more memory the neural networks do.
+
+For speed there are four classes: 64, 256, 1,024 and 4,096 steps. We compare methods within a class.
 
 ## The language
 
@@ -97,6 +128,8 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 | Bitbase | A list with one yes/no bit for every position. |
 | Baseline | A method we compare with. |
 | Bar | The best result of other methods. A new program must beat it. |
+| Bytes held | What must be unpacked and kept in memory before the first answer. Data that can be read directly from its stored form does not count. |
+| Bytes stored | Everything that must be kept or sent: program (or net, or table) plus the list of mistakes. The score. |
 | Byte, bit | A bit is one yes/no. Eight bits are one byte. We measure length in bytes. |
 | Castling, en passant | Special chess moves. They do not matter in KPK. |
 | Decision tree | A set of yes/no questions, one after the other, that leads to an answer. |
@@ -116,7 +149,8 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 | KPK, KQKP | Short names for endgames: the letters say which pieces are on the board. KPK: king and pawn against king. KQKP: king and queen against king and pawn. |
 | Key square | A square that decides the game if the king reaches it. |
 | Opposition | When the kings face each other with one square between. The player who must move is often at a disadvantage. |
-| Operation, step | One small machine step, for example an addition. We count them instead of time, because time depends on the computer. |
+| Decode, unpack | Turning a packed form back into a usable one, for example opening a compressed file. |
+| Operation, step | One small machine step, for example an addition or reading one number. We count them instead of time, because time depends on the computer. |
 | Pareto frontier | The set of best compromises: for each point on it, nothing else is both shorter and faster. |
 | Position | Where all pieces stand and who moves next. |
 | Primitive | A building block of the language, for example "distance between two squares". |

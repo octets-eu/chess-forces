@@ -42,8 +42,50 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 
 ## Waiting for the owner
 
-1. Decoded-memory rule: programs and nets may be held decoded (nets up to 7.5 KB); an 8 KB cap would exclude unpacked tables. Adopt it?
+1. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
 2. Next step: KQKP and the transfer test (free, about a day of code), or the paid effort A/B first?
+
+## Agreed ideas, not built
+
+**Three numbers instead of one cap.** Every method gets bytes stored (the score so far), steps (worst case) and bytes held (what must be unpacked into memory before the first answer; see the beginner's guide). The earlier 8 KB cap on held bytes was fitted to the nets and is withdrawn. Which limit is used decides who leads: in the nets already trained, programs lead at 1 KB of held bytes and nets from 2 KB up, but the nets were not tuned for little memory.
+
+**No hard cap as a filter.** Limits are views, not rejections. Reason, measured in run r1: 86 programs were rejected only for too many steps and were not stored; 22 of them were within 10% of the limit and 5 within 1% (smallest overshoot 0.4%).
+
+1. Keep every valid program with its three numbers, however far over a limit. Nothing is deleted for missing by a byte.
+2. Tolerant frontier: a method drops off only if another is at least 5% better in one number and not more than 5% worse in the others. The 5% is a judgment; it changes which points are listed as ties, not which data exists.
+3. Report the headline at several limits for held bytes (1/40, 1/20, 1/10 and 1/5 of the raw table) and for steps, each with a near-miss list up to 10% over. The human rules (273 steps) are a near miss of the 256 tier, not outside it.
+4. Local trimming, no model: for near misses, try removing or merging parts and keep changes that cost little accuracy but save steps or bytes.
+
+**Soft cap on spending, not on memory of results.** Tokens are rationed separately from what is kept:
+
+1. Parking lot: what trimming cannot fix is parked with its numbers, error groups and a reason. Only items within 10% of the frontier in all three numbers may be parked, so a program that buys a small gain with many more steps gets no tokens.
+2. Review: at intervals a stronger model (Opus) reads the best parked items (numbers and examples only) and must predict a concrete gain, such as "300 B less at 1,024 steps". The prediction is compared with what happened. Rough cost per review (estimate): a fraction of a cent with Haiku 5.5, a few cents with Sonnet 5.5 or Opus 5.5. No reviewer is adopted only because it is stronger: it must make better picks per dollar.
+3. Grants: approved paths may spend a small grant of 10 proposals and close after 5 without progress; parked paths together stay under about 15% of a run's budget. Grants shrink when the reviewer's picks do not pay off.
+4. Absolute limits remain where cheating is possible: 4,096 steps, and no more held bytes than the raw table.
+
+Open point: whether the review beats the simpler steering in loop v2 is unknown and needs a comparison at equal budget.
+
+### First try of trimming and review (2026-11-25, 10 rejected programs of run r1)
+
+Ten programs that run r1 had rejected only for too many steps (six within 10% of their limit, four further over) were given to five models in one call each: pick three, predict the total bytes, write a version that fits. Every answer was scored exactly, and the useful ones were checked against Syzygy. A mechanical trimmer (remove or replace single parts, greedy) ran on the same items without any model. Test scripts and result files are in `state/scripts` and `state/run-r1` (local, not in the repository).
+
+| Reviewer | Result |
+| --- | --- |
+| Haiku 5.5 (cheap) | 2 of 3 fit, no improvement over the best force program |
+| Sonnet 5.5 | 3 of 3 fit, 4,473 to 4,530 B, predictions off by 3 to 6 B; no improvement |
+| GPT-5.4 mini | one new program: 4,472 B at 388 steps (from 1,259), errors 5,447, verified against Syzygy; predictions off by 2 to 52 B |
+| DeepSeek v4 pro, Gemini 3.8 Flash | no answer: the whole 10,000-token output went into thinking |
+| Mechanical trimmer | program 966 (4,476 B, 4 steps over) trimmed to 4,430 B at 1,019 steps, errors 5,398, verified against Syzygy: better than run r1's best at that tier (4,459 B) |
+
+Findings:
+
+- Trimming one program by 29 B without any model was the best result. The run was stopped after 500 seconds: five items were worked through fully (one improved, one fell to 4,526 B and fits, three were trimmed to far worse programs of about 7,600 B, because the greedy steps cut too much); four were not reached. So this is one good case, not a rate.
+- Program 831 (4,426 B at 1,259 steps) was rejected because it was over the limit of its own island. It fits the 4,096 tier, where the best was 4,459 B, so a record was thrown away. Keeping every program and checking all tiers would have caught it.
+- Accurate predictions (Sonnet) did not bring an improvement; a model with optimistic predictions (GPT-5.4 mini) found the useful variant. Predictions should be compared with outcomes before trusting them.
+- Settings matter: reviewers need a low thinking effort or a larger output limit.
+- Ten items and one answer per model cannot rank models. At OpenRouter, Claude models cost the same as at Anthropic; other models are much cheaper, and the key used here must have its own price table in the budget guard.
+
+Order suggested by this: first the free steps (keep everything, check all tiers, trim with a gentler search), then a small reviewer comparison with Sonnet 5.5 and GPT-5.4 mini.
 
 ## Gotchas
 
