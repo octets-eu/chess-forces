@@ -12,7 +12,13 @@ OUT = ROOT / "reports"
 PROGRAMS = ROOT / "programs"
 TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
 NETS = ((8,), (16,), (32,), (64,), (128,), (16, 16))
-PROGRAM_NAMES = {"always_win": "always win", "square": "rule of the square", "human": "human rules"}
+PROGRAM_NAMES = {
+    "always_win": "always win",
+    "square": "rule of the square",
+    "human": "human rules",
+    "evolved-256": "evolved, 256 ops",
+    "evolved-1024": "evolved, 1,024 ops",
+}
 
 # categorical slots 1-3 of the reference palette (validated for scatter use, all pairs), chart inks
 BLUE, ORANGE, AQUA = "#257de0", "#f47230", "#00b894"
@@ -102,19 +108,27 @@ def _markdown(report: Report) -> str:
         "",
         "## What a force program has to beat",
         "",
-        "Smallest total bytes among the counted points at or below each operation tier.",
+        "Per operation tier: the smallest total among tables and learned models with counted operations, and the best force program at the same budget.",
         "",
-        "| Tier | Best total | Method |",
-        "| ---: | ---: | --- |",
+        "| Tier | Best other method | Best force program | Difference |",
+        "| ---: | --- | --- | ---: |",
     ]
     for tier in dsl.TIERS:
-        fits = [
+        others = [
             p
             for p in report.points
-            if p.ops_max is not None and not p.estimated_ops and p.ops_max <= tier
+            if p.kind != "force"
+            and p.ops_max is not None
+            and not p.estimated_ops
+            and p.ops_max <= tier
         ]
-        best = min(fits, key=lambda p: p.bytes_total)
-        lines.append(f"| {tier:,} | {best.bytes_total:,.0f} B | {best.name} |")
+        force = [p for p in report.points if p.kind == "force" and p.ops_max <= tier]
+        best_o = min(others, key=lambda p: p.bytes_total)
+        best_f = min(force, key=lambda p: p.bytes_total)
+        lines.append(
+            f"| {tier:,} | {best_o.bytes_total:,.0f} B ({best_o.name}) | {best_f.bytes_total:,.0f} B ({best_f.name}) | "
+            f"{best_f.bytes_total - best_o.bytes_total:+,.0f} B |"
+        )
     lines += [
         "",
         (
@@ -227,8 +241,10 @@ def _plot(report: Report, path: Path) -> None:
         "rule of the square": (9, 4, "left"),
         "decision tree, 64 leaves": (-9, -4, "right"),
         "decision tree, 128 leaves": (-9, -14, "right"),
-        "net 8": (4, -16, "left"),
-        "human rules": (9, 6, "left"),
+        "net 8": (-8, -14, "right"),
+        "human rules": (9, 8, "left"),
+        "evolved, 256 ops": (9, -14, "left"),
+        "evolved, 1,024 ops": (9, 6, "left"),
         "net 16": (9, 4, "left"),
         "net 32": (9, 4, "left"),
         "net 64": (9, -14, "left"),

@@ -161,9 +161,19 @@ class Handle:
 
 
 class Guard:
-    def __init__(self, path: Path | str | None = None, clock: Callable[[], float] = time.time):
+    """run/run_limit_usd add a third limit for one campaign, on top of the day and the total."""
+
+    def __init__(
+        self,
+        path: Path | str | None = None,
+        clock: Callable[[], float] = time.time,
+        run: str | None = None,
+        run_limit_usd=None,
+    ):
         self.path = Path(path) if path else default_path()
         self.clock = clock
+        self.run_name = run
+        self.run_limit = to_nusd(run_limit_usd) if run_limit_usd is not None else None
         self._active: set[str] = set()
         self._lock = threading.Lock()
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,6 +193,9 @@ class Guard:
                 create index if not exists calls_key on calls (key, status);
                 """
             )
+            columns = {r[1] for r in db.execute("pragma table_info(calls)")}
+            if "run" not in columns:
+                db.execute("alter table calls add column run text")
 
     @contextmanager
     def _tx(self):
@@ -218,6 +231,10 @@ class Guard:
         extra_total = db.execute(q, ("total",)).fetchone()[0]
         return int(s["daily"]) + extra_day, int(s["total"]) + extra_total
 
+    def _run_spent(self, db) -> int:
+        q = "select coalesce(sum(nusd), 0) from calls where run = ?"
+        return db.execute(q, (self.run_name,)).fetchone()[0]
+
     def _spent(self, db, day: str | None = None) -> int:
         q = "select coalesce(sum(nusd), 0) from calls"
         row = db.execute(q + " where day = ?", (day,)) if day else db.execute(q)
@@ -234,6 +251,23 @@ class Guard:
                 "insert into grants (day, kind, nusd, note, ts) values (?, ?, ?, ?, ?)",
                 (_local_day(now), kind, to_nusd(amount_usd), note, now),
             )
+
+    def results(self, prefix: str) -> list[tuple[str, object]]:
+        """Stored results whose key starts with prefix, oldest first."""
+        with self._tx() as db:
+            rows = db.execute(
+                "select key, value from results where substr(key, 1, ?) = ? order by call_id",
+                (len(prefix), prefix),
+            ).fetchall()
+        return [(k, json.loads(v)) for k, v in rows]
+
+    def run_spent(self) -> int:
+        with self._tx() as db:
+            return self._run_spent(db)
+
+    def _limits_or_none(self):
+        with self._tx() as db:
+            return dict(db.execute("select k, v from settings")) or None
 
     def status(self) -> dict:
         day = _local_day(self.clock())
@@ -269,10 +303,17 @@ class Guard:
                     f"total {usd(total_spent)} of {usd(total_limit)} USD used; "
                     f"the next call may cost up to {usd(worst)} USD"
                 )
+            if self.run_limit is not None:
+                run_spent = self._run_spent(db)
+                if run_spent + worst > self.run_limit:
+                    raise BudgetExceeded(
+                        f"run {self.run_name}: {usd(run_spent)} of {usd(self.run_limit)} USD used; "
+                        f"the next call may cost up to {usd(worst)} USD"
+                    )
             cur = db.execute(
-                "insert into calls (key, day, status, nusd, worst, model, ref, pid, ts) "
-                "values (?, ?, 'open', ?, ?, ?, null, ?, ?)",
-                (key, day, worst, worst, model, os.getpid(), now),
+                "insert into calls (key, day, status, nusd, worst, model, ref, pid, ts, run) "
+                "values (?, ?, 'open', ?, ?, ?, null, ?, ?, ?)",
+                (key, day, worst, worst, model, os.getpid(), now, self.run_name),
             )
             return cur.lastrowid
 

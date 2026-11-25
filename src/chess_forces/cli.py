@@ -61,6 +61,53 @@ def _report(_args) -> int:
     return 0
 
 
+def _evolve(args) -> int:
+    from . import score, search
+    from .budget import Guard, api_key, default_path, exit_on_budget, usd
+    from .search import SearchStopped
+
+    state = default_path().parent
+    archive = search.Archive(state / f"search-{args.run}.sqlite")
+    settings = search.Settings(
+        run=args.run,
+        workers=args.workers,
+        effort=args.effort,
+        model=args.model,
+        max_tokens=args.max_tokens,
+    )
+    evaluator = search.Evaluator(score.kpk_task())
+    bars = search.Bars.load(Path(__file__).resolve().parents[2] / "reports" / "kpk.json")
+    if args.show_prompt:
+        s = search.Search(settings, Guard(), None, archive, evaluator, bars)
+        s.seed()
+        print(s.system + "\n\n=== user prompt, island 0 ===\n\n" + s.user_prompt(0)[0])
+        return 0
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key(), max_retries=0, timeout=180)
+    guard = Guard(run=args.run, run_limit_usd=args.usd)
+    s = search.Search(settings, guard, client, archive, evaluator, bars)
+    with exit_on_budget():
+        try:
+            s.run(args.units, progress=lambda m: print(m, flush=True))
+        except SearchStopped as e:
+            print(f"stopped: {e}", file=sys.stderr)
+        finally:
+            print(s.summary())
+            out = state / f"run-{args.run}"
+            out.mkdir(exist_ok=True)
+            for tier, best in archive.best_per_tier().items():
+                (out / f"best-{tier}.dsl").write_text(best.text)
+                bar = bars.by_tier.get(tier)
+                bar_text = f"; bar {bar[0]:,.0f} B ({bar[1]})" if bar else ""
+                print(
+                    f"tier {tier:>5}: best {best.total:,.0f} B, {best.errors:,} errors, "
+                    f"ops {best.ops_max}{bar_text}"
+                )
+            print(f"programs saved in {out}; run spend so far {usd(guard.run_spent())} USD")
+    return 0
+
+
 def _confirm_tty(amount: str, what: str) -> None:
     if not sys.stdin.isatty():
         sys.exit("Refused: this needs a person at a terminal. Run it yourself, not from a script.")
@@ -115,6 +162,18 @@ def main(argv=None) -> int:
     sub.add_parser(
         "report", help="baselines, frontier and plot for KPK (about a minute)"
     ).set_defaults(fn=_report)
+    ev = sub.add_parser("evolve", help="run the search loop (spends API money)")
+    ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")
+    ev.add_argument("--usd", required=True, help="hard limit for this run in USD")
+    ev.add_argument("--units", type=int, default=None, help="stop after this many proposals")
+    ev.add_argument("--workers", type=int, default=8)
+    ev.add_argument("--effort", default="medium", choices=["low", "medium", "high"])
+    ev.add_argument(
+        "--max-tokens", type=int, default=9000, help="output limit per call, thinking included"
+    )
+    ev.add_argument("--model", default="claude-haiku-5-5")
+    ev.add_argument("--show-prompt", action="store_true", help="print a prompt and stop, no call")
+    ev.set_defaults(fn=_evolve)
     bud = sub.add_parser("budget", help="API spend limits")
     bsub = bud.add_subparsers(dest="cmd", required=True)
     init = bsub.add_parser("init", help="set the limits once")

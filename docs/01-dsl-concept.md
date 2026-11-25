@@ -28,7 +28,7 @@ So the brief's "beating the 24 KB bitbase is likely" is true but too easy. The f
 | 1,024 | 3,105 B | neural net, 32 hidden units |
 | 4,096 | 2,837 B | neural net, 64 hidden units |
 
-The hand-written rule set (`programs/human.dsl`: rule of the square, key squares, rook-pawn corner, loose pawn; 80 B of program, 7,590 errors, 5,639 B) is already on the frontier between the tree and the nets. It was tuned by hand over about 20 scoring runs on the error groups, so it is not an untouched prior.
+The hand-written rule set (`programs/human.dsl`: rule of the square, key squares, rook-pawn corner, loose pawn; 80 B of program, 7,590 errors, 5,639 B) was the first force program on the frontier. The search run r1 (2026-11-25, 1,076 proposals by Haiku 5.5) then produced `programs/evolved-256.dsl`: 5,367 B at 232 operations, below the best other method at that tier (the 8-unit net, 5,670 B), and `programs/evolved-1024.dsl`: 4,459 B at 959 operations. At 1,024 and 4,096 operations the nets still lead (3,105 B and 2,837 B). Verified against Syzygy position by position. What the winning programs use is mostly known chess: opposition, the rook-pawn corner, pawn support, blockade and captures; the new structure is the search finding compact combinations of them, not new concepts yet.
 
 ## Types
 

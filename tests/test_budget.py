@@ -265,3 +265,16 @@ def test_api_key_is_the_projects_own_and_never_falls_back(monkeypatch):
         budget.api_key()
     monkeypatch.setenv("CHESS_FORCES_API_KEY", "  project-key\n")
     assert budget.api_key() == "project-key"
+
+
+def test_run_limit_is_a_third_cap_on_top_of_the_day(guard, tmp_path, clock):
+    g = Guard(guard.path, clock, run="r1", run_limit_usd=0.05)
+    n = 0
+    with pytest.raises(BudgetExceeded, match="run r1"):
+        for n in range(1000):
+            g.run(f"r{n}", OPUS, 1000, 1000, ok(inp=1000, out=1000))
+    assert 1 < n < 10
+    assert g.run_spent() <= 0.05 * budget.NUSD
+    other = Guard(guard.path, clock, run="r2", run_limit_usd=0.05)
+    assert other.run("other-run", OPUS, 1000, 1000, ok()) == "done"
+    assert next(k for k, _ in g.results("r")) == "r0"

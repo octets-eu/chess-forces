@@ -46,3 +46,13 @@ def test_feature_matrix_matches_the_language():
     assert m.shape == (task.n, len(baselines.FEATURES))
     pos = task.positions[1000]
     assert m[1000, 0] == pos.tempo and np.all(m[1000] >= 0)
+
+
+def test_evolved_programs_are_pinned():
+    """Found by search run r1; frozen so a language change is noticed."""
+    task = score.kpk_task()
+    a = score.score((report.PROGRAMS / "evolved-256.dsl").read_text(), task)
+    assert a.errors == 6_977 and a.ops_max == 232 and a.tier == 256
+    b = score.score((report.PROGRAMS / "evolved-1024.dsl").read_text(), task)
+    assert b.errors == 5_426 and b.ops_max == 959 and b.tier == 1024
+    assert b.bytes_total < a.bytes_total < 5_500

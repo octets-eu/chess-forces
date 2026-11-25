@@ -13,7 +13,13 @@ dependencies = [
 ]
 
 [dependency-groups]
+agent = [
+    "anthropic>=2.14.0",
+]
 dev = ["pytest>=8", "ruff>=0.8", "chess>=1.11"]
+
+[tool.uv]
+default-groups = ["dev", "agent"]
 
 [project.scripts]
 chess-forces = "chess_forces.cli:main"

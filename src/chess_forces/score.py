@@ -65,6 +65,7 @@ class Report:
     table_sha256: str
     clusters: list[tuple[str, int, str]] = field(default_factory=list)  # (label, count, sample FEN)
     samples: list[str] = field(default_factory=list)
+    samples_truth: list[bool] = field(default_factory=list)  # true result of each sample
 
     @property
     def bits_total(self) -> float:
@@ -207,7 +208,9 @@ def _explain(report: Report, task: Task, wrong: list[int], clusters: int, sample
     ]
     if wrong:
         step = max(1, len(wrong) // samples)
-        report.samples = [_fen(task.positions[i]) for i in wrong[::step][:samples]]
+        chosen = wrong[::step][:samples]
+        report.samples = [_fen(task.positions[i]) for i in chosen]
+        report.samples_truth = [task.truth[i] for i in chosen]
 
 
 # --- tasks ---------------------------------------------------------------------------------------

@@ -4,7 +4,9 @@ Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c
 
 | | Total bytes | Model | Exceptions | Errors | Max ops |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| human rules ★ | 5,639 | 80.4 | 5,558.3 | 7,590 | 273 |
+| evolved, 1,024 ops | 4,459 | 150.3 | 4,308.9 | 5,426 | 959 |
+| evolved, 256 ops ★ | 5,367 | 149.5 | 5,217.8 | 6,977 | 232 |
+| human rules | 5,639 | 80.4 | 5,558.3 | 7,590 | 273 |
 | rule of the square ★ | 14,151 | 15.6 | 14,135.4 | 30,006 | 70 |
 | always win ★ | 18,914 | 0.8 | 18,912.9 | 54,394 | 32 |
 | net 64 ★ | 2,837 | 593.0 | 2,243.9 | 2,374 | 1,197 |
@@ -21,20 +23,20 @@ Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c
 | decision tree, 8 leaves ★ | 13,288 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves ★ | 15,028 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 271,500 (est) |
+| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 266,001 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824.0 | 0.0 | 0 | – |
 | bitbase (all slots) ★ | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 
 ## What a force program has to beat
 
-Smallest total bytes among the counted points at or below each operation tier.
+Per operation tier: the smallest total among tables and learned models with counted operations, and the best force program at the same budget.
 
-| Tier | Best total | Method |
-| ---: | ---: | --- |
-| 64 | 15,028 B | decision tree, 2 leaves |
-| 256 | 5,670 B | net 8 |
-| 1,024 | 3,105 B | net 32 |
-| 4,096 | 2,837 B | net 64 |
+| Tier | Best other method | Best force program | Difference |
+| ---: | --- | --- | ---: |
+| 64 | 15,028 B (decision tree, 2 leaves) | 18,914 B (always win) | +3,886 B |
+| 256 | 5,670 B (net 8) | 5,367 B (evolved, 256 ops) | -303 B |
+| 1,024 | 3,105 B (net 32) | 4,459 B (evolved, 1,024 ops) | +1,354 B |
+| 4,096 | 2,837 B (net 64) | 4,459 B (evolved, 1,024 ops) | +1,622 B |
 
 ★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come from decompression time (rough), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are written as DSL programs; the nets use 8-bit weights and count operations from their layer sizes. Seeds are fixed; results may change slightly with another scikit-learn build.
 
