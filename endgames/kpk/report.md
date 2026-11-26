@@ -49,7 +49,7 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 | decision tree, 8 leaves | 13,288 | 15,654 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves | 15,028 | 18,068 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 18,081 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 290,124 (est) |
+| lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 282,600 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824 | 7,824.0 | 0.0 | 0 | 2,122 (est) |
 | bitbase (all slots) ★ | 24,576 | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 

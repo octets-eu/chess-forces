@@ -10,7 +10,6 @@ import json
 import lzma
 import math
 import os
-import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -24,6 +23,9 @@ SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", ROOT.parent / "syzygy"))
 TREES_DIR = endgames.KPK.trees
 TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
 SYZYGY_NAME = "Syzygy KPvK.rtbw"
+# Decompressing the lzma bitbase (3,341 B to 24,576 B) with Python's lzma: median of 200 runs on an
+# Apple M4 Pro, 2026-11-26. Pinned so the report does not change from run to run; an estimate.
+LZMA_DECODE_SECONDS = 94.2e-6
 
 
 @dataclass
@@ -130,12 +132,7 @@ def table_points(win: dict | None = None) -> list[Point]:
         {"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "lc": 0, "lp": 0, "pb": 0}
     ]
     blob = lzma.compress(packed, format=lzma.FORMAT_RAW, filters=filters)
-    best = min(
-        _time(lambda: lzma.decompress(blob, lzma.FORMAT_RAW, filters=filters)) for _ in range(5)
-    )
-    ops = (
-        best * 3e9
-    )  # order of magnitude only: cold decompression time at 3 GHz, one operation a cycle
+    ops = LZMA_DECODE_SECONDS * 3e9  # order of magnitude only: one operation a cycle at 3 GHz
     out.append(
         Point(
             "lzma of the bitbase",
@@ -147,18 +144,12 @@ def table_points(win: dict | None = None) -> list[Point]:
             ops,
             True,
             True,
-            "one lzma setting, not tuned; operations are a rough estimate from decompression time "
-            "(everything must be unpacked for a single position)",
+            "one lzma setting, not tuned; operations are a rough estimate from one pinned decompression "
+            "time (everything must be unpacked for a single position)",
             real_bytes=len(blob),
         )
     )
     return out
-
-
-def _time(f) -> float:
-    t = time.perf_counter()
-    f()
-    return time.perf_counter() - t
 
 
 # --- decision tree as a DSL program --------------------------------------------------------------
