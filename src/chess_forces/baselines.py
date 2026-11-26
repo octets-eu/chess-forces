@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import endgames, kpk, nets, score
+from . import codec, dsl, endgames, kpk, nets, score
 from .dsl import TIERS, Position
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +38,7 @@ class Point:
     note: str = ""
     detail: str = ""  # program text or architecture
     state_bytes: int | None = None  # decoded size held in memory, where it matters
+    real_bytes: float | None = None  # an actual encoding (codec.py), next to the bound above
 
     @property
     def bytes_total(self) -> float:
@@ -45,6 +46,15 @@ class Point:
 
     def row(self) -> dict:
         return {**asdict(self), "bytes_total": self.bytes_total}
+
+
+PROGRAM_LENGTH_BYTES = 2  # a real file says where the program ends and the exceptions begin
+
+
+def real_program_bytes(text: str, r: score.Report) -> int:
+    """Program as a mixed-radix integer plus its length, exceptions as Elias-Fano or a bitmap."""
+    program = len(codec.encode_program(dsl.parse(text))) + PROGRAM_LENGTH_BYTES
+    return program + len(codec.encode_exceptions(r.n, r.wrong))
 
 
 def _from_report(name: str, kind: str, r: score.Report, note: str, detail: str) -> Point:
@@ -60,6 +70,7 @@ def _from_report(name: str, kind: str, r: score.Report, note: str, detail: str) 
         False,
         note,
         detail,
+        real_bytes=real_program_bytes(detail, r),
     )
 
 
@@ -88,6 +99,7 @@ def table_points(win: dict | None = None) -> list[Point]:
             "hand-counted: 5 operations to find the pawn index, 4 loads, 6 to combine, 5 for the read",
             f"{len(packed)} bytes",
             len(packed),
+            real_bytes=len(packed),
         )
     ]
     syzygy = SYZYGY_DIR / "KPvK.rtbw"
@@ -104,6 +116,7 @@ def table_points(win: dict | None = None) -> list[Point]:
                 False,
                 True,
                 "size is the file on disk; operations were not measured",
+                real_bytes=syzygy.stat().st_size,
             )
         )
     filters = [
@@ -129,6 +142,7 @@ def table_points(win: dict | None = None) -> list[Point]:
             True,
             "one lzma setting, not tuned; operations are a rough estimate from decompression time "
             "(everything must be unpacked for a single position)",
+            real_bytes=len(blob),
         )
     )
     return out
@@ -270,9 +284,20 @@ def tree_points(task: score.Task, directory: Path = TREES_DIR) -> list[Point]:
 # --- table nets (trained by nets.py, saved as integers) --------------------------------------------
 
 
+def real_net_bytes(net: nets.Net, task: score.Task) -> int:
+    """Weights as int8 with lzma plus a small header, exceptions as Elias-Fano or a bitmap."""
+    J, _ = nets.rows(task, net.family)
+    wrong = np.nonzero((net.logits(J) > 0) != np.array(task.truth))[0]
+    shape = (list(nets.FAMILIES).index(net.family), net.hidden, net.bits)
+    model = codec.encode_net(net.E, net.w, net.bias, shape)
+    return len(model) + PROGRAM_LENGTH_BYTES + len(codec.encode_exceptions(task.n, wrong))
+
+
 def net_points(task: score.Task) -> list[Point]:
     """Saved nets, evaluated exactly on all positions: those on their own frontier and the best per tier."""
-    results = [nets.evaluate(nets.load(p), task) for p in sorted(nets.NETS_DIR.glob("*.npz"))]
+    loaded = [nets.load(p) for p in sorted(nets.NETS_DIR.glob("*.npz"))]
+    results = [nets.evaluate(net, task) for net in loaded]
+    by_digest = {net.digest(): net for net in loaded}
     keep = {r.digest for r in nets.frontier(results)}
     for tier in TIERS:
         fits = [r for r in results if r.ops <= tier]
@@ -297,6 +322,7 @@ def net_points(task: score.Task) -> list[Point]:
                 "table lookups plus a small output layer, integer weights, quantisation-aware training",
                 f"digest {r.digest}",
                 r.state_bytes,
+                real_bytes=real_net_bytes(by_digest[r.digest], task),
             )
         )
     return out

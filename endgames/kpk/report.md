@@ -4,52 +4,54 @@ Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c
 
 ## Against the target: Syzygy
 
-The target is the Syzygy file of the endgame, with at most 4,096 operations per position: Syzygy KPvK.rtbw, 7,824 B on disk, operations not measured. The sizes of the programs are information bounds, Syzygy's is a real file; real encodings are not in this report yet.
+The target is the Syzygy file of the endgame, with at most 4,096 operations per position: Syzygy KPvK.rtbw, 7,824 B on disk, operations not measured. The comparison uses real sizes: the program as one mixed-radix integer over its grammar choices (the tests decode it back) with a 2-byte length, and the exceptions as Elias-Fano with a select sample every 256 zeros, or a bitmap where that is smaller, so one position can be looked up without unpacking the rest (src/chess_forces/codec.py). The bound is the score: grammar code plus log2 C(N, k).
 
-| Force program | Total bytes | Max ops | Against Syzygy |
-| --- | ---: | ---: | ---: |
-| r1-unit-831 | 4,426 | 1,259 | -3,398 B (-43%) |
-| r1-trimmed-966 | 4,430 | 1,019 | -3,394 B (-43%) |
-| evolved-1024 | 4,459 | 959 | -3,365 B (-43%) |
-| evolved-256 | 5,367 | 232 | -2,457 B (-31%) |
-| human | 5,639 | 273 | -2,185 B (-28%) |
-| square | 14,151 | 70 | +6,327 B (+81%) |
-| always_win | 18,914 | 32 | +11,090 B (+142%) |
+| Force program | Real bytes | Bound | Max ops | Against Syzygy |
+| --- | ---: | ---: | ---: | ---: |
+| r1-unit-831 | 4,886 | 4,426 | 1,259 | -2,938 B (-38%) |
+| r1-trimmed-966 | 4,890 | 4,430 | 1,019 | -2,934 B (-38%) |
+| evolved-1024 | 4,920 | 4,459 | 959 | -2,904 B (-37%) |
+| evolved-256 | 5,893 | 5,367 | 232 | -1,931 B (-25%) |
+| human | 6,207 | 5,639 | 273 | -1,617 B (-21%) |
+| square | 16,801 | 14,151 | 70 | +8,977 B (+115%) |
+| always_win | 20,718 | 18,914 | 32 | +12,894 B (+165%) |
 
 ## All methods
 
-| | Total bytes | Model | Exceptions | Errors | Max ops |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| r1-unit-831 | 4,426 | 156.1 | 4,270.4 | 5,363 | 1,259 |
-| r1-trimmed-966 | 4,430 | 138.3 | 4,291.8 | 5,398 | 1,019 |
-| evolved-1024 | 4,459 | 150.3 | 4,308.9 | 5,426 | 959 |
-| evolved-256 | 5,367 | 149.5 | 5,217.8 | 6,977 | 232 |
-| human | 5,639 | 80.4 | 5,558.3 | 7,590 | 273 |
-| square | 14,151 | 15.6 | 14,135.4 | 30,006 | 70 |
-| always_win ★ | 18,914 | 0.8 | 18,912.9 | 54,394 | 32 |
-| net relative3 14 hidden, 4 bit ★ | 2,178 | 1,531.8 | 646.0 | 530 | 235 |
-| net relative3 12 hidden, 4 bit ★ | 2,213 | 1,464.0 | 748.9 | 631 | 211 |
-| net relative3 10 hidden, 4 bit ★ | 2,390 | 1,262.6 | 1,127.5 | 1,027 | 187 |
-| net relative3 8 hidden, 4 bit ★ | 2,628 | 1,303.8 | 1,324.0 | 1,246 | 163 |
-| net relative3 6 hidden, 4 bit ★ | 2,994 | 1,008.4 | 1,985.4 | 2,041 | 139 |
-| net relative3 5 hidden, 4 bit ★ | 3,458 | 854.0 | 2,604.0 | 2,857 | 127 |
-| net relative3 4 hidden, 4 bit ★ | 4,144 | 696.3 | 3,447.8 | 4,072 | 115 |
-| net relative3 3 hidden, 4 bit ★ | 4,880 | 584.2 | 4,295.5 | 5,404 | 103 |
-| net relative 4 hidden, 4 bit ★ | 5,612 | 433.3 | 5,178.9 | 6,908 | 101 |
-| net pairs3 additive, 5 bit ★ | 5,681 | 2,878.2 | 2,802.8 | 3,133 | 58 |
-| decision tree, 128 leaves | 5,682 | 494.4 | 5,187.4 | 6,923 | 155 |
-| decision tree, 96 leaves | 6,258 | 378.1 | 5,880.3 | 8,186 | 153 |
-| net pairs additive, 5 bit ★ | 6,619 | 1,190.9 | 5,427.8 | 7,353 | 53 |
-| decision tree, 64 leaves | 7,313 | 259.0 | 7,053.6 | 10,493 | 136 |
-| decision tree, 32 leaves | 9,083 | 140.9 | 8,942.3 | 14,677 | 132 |
-| decision tree, 16 leaves | 11,032 | 81.2 | 10,950.9 | 19,845 | 126 |
-| net squares additive, 5 bit ★ | 12,002 | 79.7 | 11,922.8 | 22,656 | 52 |
-| decision tree, 8 leaves | 13,288 | 39.9 | 13,248.3 | 26,881 | 80 |
-| decision tree, 2 leaves | 15,028 | 9.7 | 15,017.8 | 33,400 | 53 |
-| decision tree, 4 leaves | 15,040 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 266,874 (est) |
-| Syzygy KPvK.rtbw | 7,824 | 7,824.0 | 0.0 | 0 | – |
-| bitbase (all slots) ★ | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
+Total bytes is the bound used for ranking and the plot; real bytes is an actual encoding.
+
+| | Total bytes | Real bytes | Model | Exceptions | Errors | Max ops |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| r1-unit-831 | 4,426 | 4,886 | 156.1 | 4,270.4 | 5,363 | 1,259 |
+| r1-trimmed-966 | 4,430 | 4,890 | 138.3 | 4,291.8 | 5,398 | 1,019 |
+| evolved-1024 | 4,459 | 4,920 | 150.3 | 4,308.9 | 5,426 | 959 |
+| evolved-256 | 5,367 | 5,893 | 149.5 | 5,217.8 | 6,977 | 232 |
+| human | 5,639 | 6,207 | 80.4 | 5,558.3 | 7,590 | 273 |
+| square | 14,151 | 16,801 | 15.6 | 14,135.4 | 30,006 | 70 |
+| always_win ★ | 18,914 | 20,718 | 0.8 | 18,912.9 | 54,394 | 32 |
+| net relative3 14 hidden, 4 bit ★ | 2,178 | 2,351 | 1,531.8 | 646.0 | 530 | 235 |
+| net relative3 12 hidden, 4 bit ★ | 2,213 | 2,383 | 1,464.0 | 748.9 | 631 | 211 |
+| net relative3 10 hidden, 4 bit ★ | 2,390 | 2,576 | 1,262.6 | 1,127.5 | 1,027 | 187 |
+| net relative3 8 hidden, 4 bit ★ | 2,628 | 2,783 | 1,303.8 | 1,324.0 | 1,246 | 163 |
+| net relative3 6 hidden, 4 bit ★ | 2,994 | 3,224 | 1,008.4 | 1,985.4 | 2,041 | 139 |
+| net relative3 5 hidden, 4 bit ★ | 3,458 | 3,771 | 854.0 | 2,604.0 | 2,857 | 127 |
+| net relative3 4 hidden, 4 bit ★ | 4,144 | 4,471 | 696.3 | 3,447.8 | 4,072 | 115 |
+| net relative3 3 hidden, 4 bit ★ | 4,880 | 5,410 | 584.2 | 4,295.5 | 5,404 | 103 |
+| net relative 4 hidden, 4 bit ★ | 5,612 | 6,123 | 433.3 | 5,178.9 | 6,908 | 101 |
+| net pairs3 additive, 5 bit ★ | 5,681 | 5,579 | 2,878.2 | 2,802.8 | 3,133 | 58 |
+| decision tree, 128 leaves | 5,682 | 6,205 | 494.4 | 5,187.4 | 6,923 | 155 |
+| decision tree, 96 leaves | 6,258 | 6,878 | 378.1 | 5,880.3 | 8,186 | 153 |
+| net pairs additive, 5 bit ★ | 6,619 | 6,964 | 1,190.9 | 5,427.8 | 7,353 | 53 |
+| decision tree, 64 leaves | 7,313 | 8,258 | 259.0 | 7,053.6 | 10,493 | 136 |
+| decision tree, 32 leaves | 9,083 | 10,242 | 140.9 | 8,942.3 | 14,677 | 132 |
+| decision tree, 16 leaves | 11,032 | 12,767 | 81.2 | 10,950.9 | 19,845 | 126 |
+| net squares additive, 5 bit ★ | 12,002 | 14,121 | 79.7 | 11,922.8 | 22,656 | 52 |
+| decision tree, 8 leaves | 13,288 | 15,654 | 39.9 | 13,248.3 | 26,881 | 80 |
+| decision tree, 2 leaves | 15,028 | 18,068 | 9.7 | 15,017.8 | 33,400 | 53 |
+| decision tree, 4 leaves | 15,040 | 18,081 | 22.6 | 15,017.8 | 33,400 | 75 |
+| lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 267,999 (est) |
+| Syzygy KPvK.rtbw | 7,824 | 7,824 | 7,824.0 | 0.0 | 0 | – |
+| bitbase (all slots) ★ | 24,576 | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 
 ## References per tier
 

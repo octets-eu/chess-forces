@@ -66,6 +66,7 @@ class Report:
     clusters: list[tuple[str, int, str]] = field(default_factory=list)  # (label, count, sample FEN)
     samples: list[str] = field(default_factory=list)
     samples_truth: list[bool] = field(default_factory=list)  # true result of each sample
+    wrong: tuple[int, ...] = field(default=(), repr=False)  # indices of the exceptions
 
     @property
     def bits_total(self) -> float:
@@ -76,7 +77,7 @@ class Report:
         return self.bits_total / 8
 
     def to_json(self) -> str:
-        d = {k: v for k, v in self.__dict__.items()}
+        d = {k: v for k, v in self.__dict__.items() if k != "wrong"}
         d["bytes_program"] = self.bits_program / 8
         d["bytes_exceptions"] = self.bits_exceptions / 8
         d["bytes_total"] = self.bytes_total
@@ -181,6 +182,7 @@ def score(
         program_hash=hashlib.sha256(text.encode()).hexdigest()[:16],
         dsl=f"dsl {DSL_VERSION} {fingerprint()}",
         table_sha256=task.sha256,
+        wrong=tuple(wrong),
     )
     _explain(report, task, wrong, clusters, samples)
     return report

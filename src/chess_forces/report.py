@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import baselines, dsl, endgames, score
+from . import baselines, codec, dsl, endgames, score
 from .baselines import Point
 
 ENDGAME = endgames.KPK
@@ -91,26 +91,31 @@ def _markdown(report: Report) -> str:
             "",
             (
                 f"The target is the Syzygy file of the endgame, with at most 4,096 operations per position: "
-                f"{syz.name}, {syz.bytes_total:,.0f} B on disk, operations not measured. The sizes of the "
-                "programs are information bounds, Syzygy's is a real file; real encodings are not in this "
-                "report yet."
+                f"{syz.name}, {syz.bytes_total:,.0f} B on disk, operations not measured. The comparison uses "
+                "real sizes: the program as one mixed-radix integer over its grammar choices (the tests "
+                f"decode it back) with a {baselines.PROGRAM_LENGTH_BYTES}-byte length, and the exceptions as "
+                f"Elias-Fano with a select sample every {codec.SELECT_STRIDE} zeros, or a bitmap where that "
+                "is smaller, so one position can be looked up without unpacking the rest (src/chess_forces/"
+                "codec.py). The bound is the score: grammar code plus log2 C(N, k)."
             ),
             "",
-            "| Force program | Total bytes | Max ops | Against Syzygy |",
-            "| --- | ---: | ---: | ---: |",
+            "| Force program | Real bytes | Bound | Max ops | Against Syzygy |",
+            "| --- | ---: | ---: | ---: | ---: |",
         ]
-        for p in force:
-            d = p.bytes_total - syz.bytes_total
+        for p in sorted(force, key=lambda p: p.real_bytes):
+            d = p.real_bytes - syz.bytes_total
             lines.append(
-                f"| {p.name} | {p.bytes_total:,.0f} | {p.ops_max:,.0f} | "
+                f"| {p.name} | {p.real_bytes:,.0f} | {p.bytes_total:,.0f} | {p.ops_max:,.0f} | "
                 f"{d:+,.0f} B ({d / syz.bytes_total:+.0%}) |"
             )
     lines += [
         "",
         "## All methods",
         "",
-        "| | Total bytes | Model | Exceptions | Errors | Max ops |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "Total bytes is the bound used for ranking and the plot; real bytes is an actual encoding.",
+        "",
+        "| | Total bytes | Real bytes | Model | Exceptions | Errors | Max ops |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for p in sorted(report.points, key=lambda p: (p.kind, p.bytes_total)):
         ops = (
@@ -119,8 +124,9 @@ def _markdown(report: Report) -> str:
             else f"{p.ops_max:,.0f}" + (" (est)" if p.estimated_ops else "")
         )
         star = " ★" if p in report.frontier else ""
+        real = "–" if p.real_bytes is None else f"{p.real_bytes:,.0f}"
         lines.append(
-            f"| {p.name}{star} | {p.bytes_total:,.0f} | {p.bytes_model:,.1f} | {p.bytes_exceptions:,.1f} | {p.errors:,} | {ops} |"
+            f"| {p.name}{star} | {p.bytes_total:,.0f} | {real} | {p.bytes_model:,.1f} | {p.bytes_exceptions:,.1f} | {p.errors:,} | {ops} |"
         )
     lines += [
         "",
