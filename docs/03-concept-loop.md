@@ -109,6 +109,10 @@ Claude Haiku 5.5 at medium effort, as in r1, through `chess_forces.budget` with 
 
 A module `src/chess_forces/concepts.py` (pool, scoring, trees) and a command `chess-forces concepts --run c1 --usd 3`, reusing the paid-call, repair and archive parts of `search.py`. The pool of accepted concepts is KPK's and lives in `endgames/kpk/concepts.json`; the run's archive stays in `state/`. The stronger enumeration extends `scripts/enumerate_concepts.py`.
 
+## Next
+
+The test moves to the next endgame, KQvKP (concept note 04), where a queen's lines, checks and stalemates may be harder to enumerate than distances: first a saturated enumerated pool, then the model's concepts against it, and a paid run only if they win there.
+
 ## What it will not show
 
 New chess. KPK is textbook, and so far both the model and the enumeration produced known ideas. A novelty test belongs to the unexplained exceptions of a 5-piece endgame or to a board without human theory (the brief's invented piece).

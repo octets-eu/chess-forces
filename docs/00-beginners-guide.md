@@ -95,10 +95,10 @@ Every dot is a method. Lower and further left is better: less total length and l
 
 As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md); the full write-up: [analysis.md](../endgames/kpk/analysis.md)):
 
-- Almost every program in our language is smaller than the Syzygy file for KPK (7,824 bytes), measured as real files that can be decoded again. The best one needs 2,640 bytes, and one needs 4,136 bytes with no list of mistakes at all. They were built by a computer, without the AI: it combined ideas (concepts) into a decision tree. The best program the AI wrote alone needs 4,886 bytes.
-- The ideas themselves came from the AI's programs and from a computer that tried thousands of simple comparisons. Both kinds of ideas are useful; together they are best.
-- KPK is still a weak test. A small neural network is smaller (2,351 bytes, with some mistakes), and one without mistakes needs 4,018 bytes. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
-- The plot shows the score, which is the shortest possible encoding; a real file is about 10% larger for programs with many mistakes. The comparison with Syzygy uses the real files.
+- Almost every program in our language is smaller than the Syzygy file for KPK (7,824 bytes), measured as real files that can be decoded again. The smallest one with no list of mistakes at all needs 2,201 bytes. Programs like it are built by a computer, without the AI: it combines ideas (concepts) into a decision tree. The best program the AI wrote alone needs 4,886 bytes.
+- Most of the ideas are simple quantities, such as how far each king is from a square or how many steps it needs around guarded squares; the computer tries thousands of comparisons of them. Ten ideas taken from the AI's best program make the result smaller still. In a first small test, new ideas asked from the AI were no better than comparisons picked at random.
+- KPK is still a weak test. Neural networks are the reference: the best one needs 2,351 bytes with some mistakes, one without mistakes 4,018 bytes, both with far fewer steps than our smallest programs.
+- The plot shows the score, which is the shortest possible encoding; a real file is a little larger. The comparison with Syzygy uses the real files.
 - The ideas the programs use are known chess: the rule of the square, opposition, key squares, the rook-pawn corner.
 - An earlier statement that the AI had beaten the neural networks was wrong, because the networks we compared with were too weak.
 
