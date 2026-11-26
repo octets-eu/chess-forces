@@ -24,6 +24,15 @@ def test_every_program_in_the_kpk_folder_scores_on_kpk(path):
     assert r.task == "kpk" and r.tier is not None
 
 
+def test_syzygy_operations_estimate_is_recorded():
+    """endgames/kpk/syzygy.json comes from scripts/syzygy_ops.py; the report reads it."""
+    import json
+
+    est = json.loads(endgames.KPK.syzygy_ops.read_text())
+    assert est["estimate"] is True and est["positions"] == 165_676
+    assert 0 < est["ops_mean"] <= est["ops_max"] <= 4_096
+
+
 def test_the_kpk_folder_holds_its_parts():
     kpk = endgames.KPK
     assert kpk.programs.is_dir() and kpk.trees.is_dir() and kpk.nets.is_dir()

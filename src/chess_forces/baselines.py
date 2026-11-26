@@ -6,6 +6,7 @@ formula (the net) gives their operation counts. Everything learned is trained on
 exceptions charge every mistake, so there is nothing to overfit to.
 """
 
+import json
 import lzma
 import math
 import os
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", ROOT.parent / "syzygy"))
 TREES_DIR = endgames.KPK.trees
 TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
+SYZYGY_NAME = "Syzygy KPvK.rtbw"
 
 
 @dataclass
@@ -104,18 +106,23 @@ def table_points(win: dict | None = None) -> list[Point]:
     ]
     syzygy = SYZYGY_DIR / "KPvK.rtbw"
     if syzygy.exists():
+        counted = endgames.KPK.syzygy_ops
+        est = json.loads(counted.read_text()) if counted.exists() else None
         out.append(
             Point(
-                "Syzygy KPvK.rtbw",
+                SYZYGY_NAME,
                 "table",
                 syzygy.stat().st_size,
                 0.0,
                 0,
-                None,
-                None,
-                False,
+                est["ops_mean"] if est else None,
+                est["ops_max"] if est else None,
+                est is not None,
                 True,
-                "size is the file on disk; operations were not measured",
+                "size is the file on disk; operations estimated by scripts/syzygy_ops.py "
+                "(counted decoder steps, costs per step by hand)"
+                if est
+                else "size is the file on disk; operations were not measured",
                 real_bytes=syzygy.stat().st_size,
             )
         )

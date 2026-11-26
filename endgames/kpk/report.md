@@ -4,7 +4,7 @@ Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c
 
 ## Against the target: Syzygy
 
-The target is the Syzygy file of the endgame, with at most 4,096 operations per position: Syzygy KPvK.rtbw, 7,824 B on disk, operations not measured. The comparison uses real sizes: the program as one mixed-radix integer over its grammar choices (the tests decode it back) with a 2-byte length, and the exceptions as Elias-Fano with a select sample every 256 zeros, or a bitmap where that is smaller, so one position can be looked up without unpacking the rest (src/chess_forces/codec.py). The bound is the score: grammar code plus log2 C(N, k).
+The target is the Syzygy file of the endgame, with at most 4,096 operations per position: Syzygy KPvK.rtbw, 7,824 B on disk, about 983 operations on average and 2,122 at most (an estimate: decoder steps counted over every position, costs per step by hand, syzygy.json and scripts/syzygy_ops.py). The comparison uses real sizes: the program as one mixed-radix integer over its grammar choices (the tests decode it back) with a 2-byte length, and the exceptions as Elias-Fano with a select sample every 256 zeros, or a bitmap where that is smaller, so one position can be looked up without unpacking the rest (src/chess_forces/codec.py). The bound is the score: grammar code plus log2 C(N, k).
 
 | Force program | Real bytes | Bound | Max ops | Against Syzygy |
 | --- | ---: | ---: | ---: | ---: |
@@ -49,8 +49,8 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 | decision tree, 8 leaves | 13,288 | 15,654 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves | 15,028 | 18,068 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 18,081 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 267,999 (est) |
-| Syzygy KPvK.rtbw | 7,824 | 7,824 | 7,824.0 | 0.0 | 0 | – |
+| lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 290,124 (est) |
+| Syzygy KPvK.rtbw | 7,824 | 7,824 | 7,824.0 | 0.0 | 0 | 2,122 (est) |
 | bitbase (all slots) ★ | 24,576 | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 
 ## References per tier
@@ -64,6 +64,6 @@ Tables and learned models are references, not targets: they show how much of a w
 | 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,430 B (r1-trimmed-966) | +2,252 B |
 | 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,426 B (r1-unit-831) | +2,249 B |
 
-★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
+★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations are an estimate (see above); lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 
 Force programs: programs/*.dsl, hand-written or found by search. Paths are relative to this folder. The human rules were written from chess theory and tuned by looking at groups of mistakes over about 20 quick runs.

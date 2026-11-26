@@ -1,0 +1,36 @@
+{
+ "table": "KPvK",
+ "positions": 165676,
+ "ops_mean": 982.9648953378884,
+ "ops_max": 2122,
+ "estimate": true,
+ "method": "python-chess probe_wdl with a counting decoder; step costs and fixed parts counted by hand",
+ "step_cost": {
+  "setup": 11,
+  "size_step": 5,
+  "block_start": 7,
+  "symbol": 12,
+  "length_step": 3,
+  "refill": 6,
+  "pair_step": 15,
+  "finish": 4
+ },
+ "fixed": {
+  "material key and colour mirror": 13,
+  "squares of the three men": 11,
+  "pawn file and index of the position": 25,
+  "capture check (king takes pawn)": 8
+ },
+ "worst_steps": {
+  "setup": 1,
+  "size_step": 11,
+  "block_start": 1,
+  "symbol": 97,
+  "length_step": 258,
+  "refill": 15,
+  "pair_step": 9,
+  "finish": 1
+ },
+ "date": "2026-11-26",
+ "python_chess": "1.11.2"
+}

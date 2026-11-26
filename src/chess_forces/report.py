@@ -82,7 +82,7 @@ def _markdown(report: Report) -> str:
             "are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate."
         ),
     ]
-    syz = next((p for p in report.points if p.kind == "table" and p.ops_max is None), None)
+    syz = next((p for p in report.points if p.name == baselines.SYZYGY_NAME), None)
     force = sorted((p for p in report.points if p.kind == "force"), key=lambda p: p.bytes_total)
     if syz:
         lines += [
@@ -91,7 +91,15 @@ def _markdown(report: Report) -> str:
             "",
             (
                 f"The target is the Syzygy file of the endgame, with at most 4,096 operations per position: "
-                f"{syz.name}, {syz.bytes_total:,.0f} B on disk, operations not measured. The comparison uses "
+                f"{syz.name}, {syz.bytes_total:,.0f} B on disk, "
+                + (
+                    f"about {syz.ops_mean:,.0f} operations on average and {syz.ops_max:,.0f} at most "
+                    "(an estimate: decoder steps counted over every position, costs per step by hand, "
+                    "syzygy.json and scripts/syzygy_ops.py). "
+                    if syz.ops_max is not None
+                    else "operations not measured. "
+                )
+                + "The comparison uses "
                 "real sizes: the program as one mixed-radix integer over its grammar choices (the tests "
                 f"decode it back) with a {baselines.PROGRAM_LENGTH_BYTES}-byte length, and the exceptions as "
                 f"Elias-Fano with a select sample every {codec.SELECT_STRIDE} zeros, or a bitmap where that "
@@ -161,7 +169,7 @@ def _markdown(report: Report) -> str:
         "",
         (
             "★ on the frontier of counted points (smallest total bytes at or below that operation count). "
-            "Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come "
+            "Tables: Syzygy's operations are an estimate (see above); lzma is one setting, and its operations come "
             "from decompression time (rough, and different on every run), because a single position needs "
             "the whole file unpacked. "
             "Learned baselines are trained on all positions and their exceptions are charged. The decision "
@@ -242,13 +250,14 @@ def _plot(report: Report, path: Path) -> None:
         drawstyle="steps-post",
         label="Frontier of counted points",
     )
-    syz = next((p for p in report.points if p.ops_max is None), None)
+    syz = next((p for p in report.points if p.name == baselines.SYZYGY_NAME), None)
     if syz:
         ax.axhline(syz.bytes_total, color=AQUA, lw=1.2, ls=(0, (5, 4)), zorder=1)
         ax.text(
             0.985,
             syz.bytes_total * 1.07,
-            f"Target: {syz.name}, {syz.bytes_total:,.0f} B (operations not measured)",
+            f"Target: {syz.name}, {syz.bytes_total:,.0f} B"
+            + (" (operations not measured)" if syz.ops_max is None else ""),
             color=INK_2,
             fontsize=9,
             ha="right",
@@ -264,7 +273,7 @@ def _plot(report: Report, path: Path) -> None:
     ax.set_ylim(min(p.bytes_total for p in report.points) * 0.75, 32_000)
     ax.grid(True, which="major", color=GRID, lw=0.8, zorder=0)
     ax.set_xlabel("Operations per position, worst case (64-bit word operations)")
-    ax.set_ylabel("Total bytes (program or model, plus exceptions)")
+    ax.set_ylabel("Total bytes: program or model plus exceptions (the score)")
     ax.set_title(
         "KPK: size against compute (smaller is better)", loc="left", fontsize=13, color=INK, pad=12
     )
@@ -281,6 +290,7 @@ def _plot(report: Report, path: Path) -> None:
         "r1-trimmed-966": (9, -18, "left"),
         "r1-unit-831": (9, 8, "left"),
         "lzma of the bitbase": (9, 6, "left"),
+        "Syzygy KPvK.rtbw": (9, -16, "left"),
         "net pairs3 additive, 5 bit": None,  # named in the report's table; no room on the plot
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
     }
