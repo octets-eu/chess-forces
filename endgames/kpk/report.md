@@ -47,7 +47,7 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 | decision tree, 8 leaves | 13,288 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves | 15,028 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 273,501 (est) |
+| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 266,874 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824.0 | 0.0 | 0 | – |
 | bitbase (all slots) ★ | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 

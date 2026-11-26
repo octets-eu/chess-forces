@@ -271,9 +271,11 @@ def _plot(report: Report, path: Path) -> None:
         "decision tree, 64 leaves": (9, -4, "left"),
         "human": (9, 6, "left"),
         "evolved-256": (9, -14, "left"),
-        "evolved-1024": (9, 6, "left"),
+        "evolved-1024": (-9, -18, "right"),
+        "r1-trimmed-966": (9, -18, "left"),
+        "r1-unit-831": (9, 8, "left"),
         "lzma of the bitbase": (9, 6, "left"),
-        "net pairs3 additive, 5 bit": (9, -14, "left"),
+        "net pairs3 additive, 5 bit": None,  # named in the report's table; no room on the plot
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
     }
     tier_best = {
@@ -283,12 +285,26 @@ def _plot(report: Report, path: Path) -> None:
         ).name
         for t in dsl.TIERS
     }
-    for p in report.points:
-        named = p.name in labels or p.name in tier_best or p.kind == "force"
-        if named and p.ops_max is not None:
-            dx, dy, ha = labels.get(p.name, (9, -4, "left"))
-            text = p.name + (" (operations estimated)" if p.estimated_ops else "")
-            ax.annotate(
+    # Labels: preferred offsets first, then the first free spot, so points added later
+    # (promoted programs) do not write over each other.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    placed = []
+    spots = [(9, 4, "left"), (9, -14, "left"), (9, 16, "left"), (9, -26, "left"), (-9, 4, "right")]
+    chosen = [
+        p
+        for p in report.points
+        if p.ops_max is not None
+        and (p.name in labels or p.name in tier_best or p.kind == "force")
+        and labels.get(p.name, ()) is not None
+    ]
+    chosen.sort(key=lambda p: (p.name not in labels, p.ops_max))
+    for p in chosen:
+        text = p.name + (" (operations estimated)" if p.estimated_ops else "")
+        tries = ([labels[p.name]] if p.name in labels else []) + spots
+        for dx, dy, ha in tries:
+            far = abs(dy) > 8  # a leader line shows which point a moved label belongs to
+            ann = ax.annotate(
                 text,
                 (p.ops_max, p.bytes_total),
                 xytext=(dx, dy),
@@ -296,7 +312,24 @@ def _plot(report: Report, path: Path) -> None:
                 fontsize=8.5,
                 color=INK,
                 ha=ha,
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": INK_2,
+                    "lw": 0.6,
+                    "shrinkA": 1,
+                    "shrinkB": 4,
+                }
+                if far
+                else None,
             )
+            box = ann.get_window_extent(renderer)
+            if not any(box.overlaps(q) for q in placed):
+                placed.append(box)
+                break
+            ann.remove()
+        else:
+            placed.append(box)
+            ax.add_artist(ann)
     fig.tight_layout()
     fig.savefig(path, facecolor=SURFACE)
     plt.close(fig)
