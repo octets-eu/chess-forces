@@ -12,33 +12,34 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ## Where things stand
 
-- Phase 1 is done: KPK table (own rules code, verified against Syzygy position by position), the language and its interpreter, the scorer, baselines, a hand-written rule set, a plot. A single-user search loop (Phase 2) exists and has run once (r1). 134 tests pass.
-- KPK against Syzygy (7,824 B): three force programs are smaller: run r1 4,459 B (959 operations) and 5,367 B (232 operations), human rules 5,639 B (273 operations). A trimmed r1 program, 4,430 B at 1,019 operations, exists only in `state/` (see the first try of trimming below). Current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md).
-- Two caveats on that win. The program sizes are information bounds (grammar code, log2 C(N, k)), while Syzygy's is a real file; a real exception list is larger (Elias–Fano without its select index: 8–14% at 100 to 3,000 errors, 28% at 10,000, see 01; the force programs have about 5,400), and real sizes are not in the report yet. Syzygy's operations were not measured, so "smaller at the same compute" is not shown either.
-- References: a table net (2,178 B, 235 operations) and lzma of the bitbase (3,341 B, operations a rough estimate) are smaller than every force program. At KPK, being smaller than Syzygy is therefore a weak result.
-- What the search found is known chess (opposition, corner, support, blockade), not new concepts. Force programs are small (about 150 B); almost all their cost is exceptions.
+- **KPK is closed** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). Five force programs are smaller than Syzygy's `KPvK.rtbw` (7,824 B) in real bytes: the best, `r1-unit-831`, is 4,886 B (−38%) at 1,259 operations at most, 403 on average; Syzygy needs an estimated 2,122 at most, 983 on average. Real bytes are an actual encoding (`codec.py`), about 10% above the score's bound.
+- References are smaller still: a table net 2,351 B real at 235 operations, lzma of the bitbase 3,341 B at an estimated 282,600. At KPK, beating Syzygy says more about Syzygy's general format than about the concepts; the real test is 5 pieces and more.
+- What the search found is known chess (square, key squares, opposition, rook-pawn corner, blockade, captures), not new concepts. Programs are small (about 150 B); almost all their cost is exceptions, most of them with a central pawn on ranks 2 to 4.
+- Phase 1 is done and a single-user search loop exists (one run, r1). 179 tests pass.
 - Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git
 
 - `main` is published on GitHub (first push 2026-11-25). Feature branches stay local. Commit as `operator`, no attribution lines, only when asked; never push without asking.
-- `main` holds everything: Phase 1 core, baselines and human rules, the search loop with run r1, the faster loop with table nets. The feature branches point into it.
+- `main` holds Phase 1, the search loop with run r1, the table nets and the Syzygy goal. Branch `close-kpk` (local, not merged) holds the KPK closing: endgame folder, `promote`, real sizes, Syzygy's operations, the analysis.
 
 ## Where things are
 
-- `src/chess_forces/`: `dsl.py` language, interpreter and costs; `score.py` scorer; `kpk.py`, `board.py` rules and table; `baselines.py`, `nets.py`, `report.py` other methods and the plot; `search.py` loop; `budget.py` spend guard; `cli.py` commands.
-- `endgames/kpk/`: everything about KPK; the folder decides the endgame (`src/chess_forces/endgames.py`). `programs/*.dsl`: hand-written and found programs (text, never run as Python). `trees/`: the decision-tree baselines as DSL programs; the report reads them, only `chess-forces trees` retrains them, and a test checks that retraining gives the same text. `nets/`: trained nets (integers) and the sweep record. `report.md`, `report.json`, `report.png`: table, plot, JSON.
+- `src/chess_forces/`: `dsl.py` language, interpreter and costs; `score.py` scorer; `codec.py` real encodings (program, exceptions, nets); `kpk.py`, `board.py` rules and table; `endgames.py` the endgame folders; `baselines.py`, `nets.py`, `report.py` other methods and the plot; `promote.py` moving programs into a folder; `search.py` loop; `budget.py` spend guard; `cli.py` commands. `scripts/syzygy_ops.py`: Syzygy's operations (uses python-chess, so not in `src/`).
+- `endgames/kpk/`: everything about KPK; the folder decides the endgame (`src/chess_forces/endgames.py`). `programs/*.dsl`: hand-written and found programs (text, never run as Python). `trees/`: the decision-tree baselines as DSL programs; the report reads them, only `chess-forces trees` retrains them, and a test checks that retraining gives the same text. `nets/`: trained nets (integers) and the sweep record. `syzygy.json`: Syzygy's operations, an estimate. `report.md`, `report.json`, `report.png`: table, plot, JSON. `analysis.md`: the written result.
 - Local only, gitignored: `state/` with the spend ledger `budget.sqlite`, `search-r1.sqlite` (all 1,076 proposals with their texts and scores) and `run-r1/`. Deleting them loses the run archive, not the results in the repository.
 - Syzygy 3-4-5 tables live next to the repository in `../syzygy`. They are read only by tests and by one-off scripts through python-chess, which `src/` must not import.
 
 ## Commands
 
 ```text
-uv run chess-forces kpk | spec | score FILE | report | trees | train-nets | evolve ... | budget status
-uv run pytest            # about 30 s
+uv run chess-forces kpk | spec | score FILE | report | trees | promote FILE... | train-nets | evolve ... | budget status
+uv run pytest            # about 70 s
 uv run chess-forces report        # rebuilds endgames/kpk/report.* (about 15 s)
 uv run chess-forces trees         # retrains the decision trees into endgames/kpk/trees (a few seconds)
 uv run chess-forces train-nets    # retrains the nets (about 25 minutes, all cores)
+uv run chess-forces promote FILE --name NAME   # copies a program into endgames/kpk/programs if it beats its tier
+uv run python scripts/syzygy_ops.py            # rewrites endgames/kpk/syzygy.json (about 5 s)
 uv run chess-forces evolve --run r2 --usd 3   # needs the API key and the owner's budget confirmation
 ```
 
@@ -48,24 +49,14 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 
 ## Waiting for the owner
 
-1. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
-2. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
-3. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
+1. Merge `close-kpk` into `main`, and push?
+2. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
+3. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
+4. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
 
-## Plan: close KPK (proposed 2026-11-26, waiting for approval)
+## KPK closed (2026-11-26)
 
-All free, on a branch `close-kpk`, one commit per step, tests green after each. It builds the agreed ideas "One folder per endgame" and "Honest numbers" below, as far as KPK needs them.
-
-1. **Endgame folder.** `endgames/kpk/` holds `programs/` (force programs), `trees/`, `nets/` (with `sweep.json`) and `syzygy.json` (step 5); its root holds `report.md`, `report.json`, `report.png` and later `analysis.md`. `programs/`, `baselines/` and `reports/` go away (`git mv`, history kept). One endgame description in `src/` (name, folder, table) is used by report, search, trees, nets and `score`, which takes the endgame from the path. A test scores every program in the folder on KPK; the pinned numbers stay.
-2. **The report finds programs itself.** Every `*.dsl` in `programs/` is plotted, named by its file name (`evolved-1024`, `human`), so the label leads to the file. `PROGRAM_NAMES` goes.
-3. **`chess-forces promote FILE...`.** Scores each file; it is copied into `programs/` if it is smaller than every force program already there within its tier, with a docstring on where it came from (source, date, bytes, operations), and the report is rebuilt. Older programs stay. Candidates: the trimmed program (4,430 B at 1,019 operations, tier 1,024) and program 831 (4,426 B at 1,259 operations, tier 4,096; text in `state/run-r1/review1.json`). The search loop calls `promote` at the end of a run (small change in `evolve`).
-4. **Real sizes next to the bounds.** Programs and trees: the grammar choices written as one mixed-radix integer, which is exact and decodable and needs at most one byte more than the bound; a test decodes it back. Exceptions: Elias–Fano with a sampled select index, so one position can be looked up without unpacking the rest, or a plain bitmap where that is smaller; a test checks every position. Nets: their integer weights packed with lzma. The report gets a real-size column, and the headline against Syzygy uses it. The lookup cost stays the assumed 32 operations.
-5. **Syzygy's operations, roughly.** A script outside `src/` (python-chess may not be imported there) probes all 165,676 positions with a counting copy of the decoder: block search steps, symbols decoded, pair expansions, capture check. Step counts times per-step costs from the C reference code, plus a hand count of the index calculation, give mean and worst case; it writes `syzygy.json`, which the report reads. Marked as an estimate.
-6. **lzma's operations pinned.** One timing, written down with its date and machine, instead of a new one on every run, so the report stops changing by itself. Still marked as an estimate.
-7. **`analysis.md`** in `endgames/kpk/`: the result against Syzygy on real sizes, the references per tier, the best force programs and the chess ideas they use, what did not work (r1, the first trimming trial), what stays open, every number with its command.
-8. **Docs** follow the new paths (STATUS, README, guide, 01, 02, `CLAUDE.md`); STATUS marks KPK as closed.
-
-Not part of this: the soft-cap search changes (question 1 above), the new search prompt, and anything paid.
+Done on branch `close-kpk`, one commit per step: one folder per endgame (`endgames/kpk/`, the folder decides the endgame); the report plots every program in `programs/`, named by file; `chess-forces promote`, which the search also calls at the end of a run, promoted the trimmed r1 program (4,430 B) and r1 proposal 831 (4,426 B, recovered from the run's ledger); real sizes next to the bounds (`codec.py`, decoded back in the tests); Syzygy's operations estimated (`scripts/syzygy_ops.py`); lzma's operations pinned to one timing, so two report runs give identical files; [analysis.md](../endgames/kpk/analysis.md).
 
 ## Agreed ideas, not built
 
@@ -87,22 +78,14 @@ Not part of this: the soft-cap search changes (question 1 above), the new search
 
 Open point: whether the review beats the simpler steering in loop v2 is unknown and needs a comparison at equal budget.
 
-**One folder per endgame, and no result stays local.** Found 2026-11-26: a program file does not say which endgame it is for (K, k and P would appear in KQKP too), and a better program (the trimmed 4,430 B one below) exists only in `state/` and is missing from the report.
+**No result stays local.** Built 2026-11-26 except point 1: one folder per endgame, the report reads every program in it, `promote`, and the rule in `CLAUDE.md` that a program's number goes into the docs only after the program is in its folder and in the report.
 
-1. One folder per endgame holds everything about it, for example `endgames/kpk/` with `programs/`, `trees/` and `nets/` inside (the folder name is a suggestion). The folder decides the task: report and search read only that folder, and `chess-forces score` takes the task from the path (`--task` only for files elsewhere). A test scores every program in `endgames/kpk/` on KPK. The task is not put only in a docstring, because nothing checks a docstring.
-2. The report (png, md, json) is written to the root of that folder. When a set such as KPvK is done, a written analysis (`analysis.md`) joins it there: the result against Syzygy, the references per tier, the best force programs and the chess ideas they use, what did not work, and every number with the command that produced it. A set counts as done only when its root has the plot and the analysis.
-3. The report plots every program in its folder, not the fixed list `PROGRAM_NAMES` in `report.py`, so a file dropped in is enough.
-4. `chess-forces promote FILE...` scores each program, copies those that beat the best force program of a tier into the endgame's `programs/` with a docstring saying where it came from, and rebuilds the report. The search loop calls it at the end of every run, and one-off scripts call it too. First candidate: `state/run-r1/trimmed-966-4430B-1019ops.dsl` (1,024 tier, 29 B better than run r1's best).
-5. `chess-forces report` scans `state/**/*.dsl` and lists local programs that would beat the frontier but are not promoted. This only works on the owner's machine, because `state/` is not in git.
-6. A rule for the repository's `CLAUDE.md`: a program's number goes into the docs only after the program is in its endgame folder and in the report.
+1. `chess-forces report` scans `state/**/*.dsl` and lists local programs that would beat the frontier but are not promoted. This only works on the owner's machine, because `state/` is not in git.
 
-**Honest numbers against Syzygy, and a search aimed at it.** Agreed 2026-11-26, not built.
+**A search aimed at Syzygy.** Agreed 2026-11-26. Real sizes, Syzygy's operations and a pinned lzma timing are built (above); open:
 
-1. Real sizes in the report next to the information bounds: the exceptions in a structure that can be read at random (Elias–Fano), the program as stored. A win over Syzygy is claimed on real sizes.
-2. Syzygy's operations: a rough count of one probe (index, finding the block, decoding, capture check), marked as such.
-3. lzma's operations from a count, not from decompression time × 3 GHz, which depends on the machine and changes on every run (297,876 and 267,750 on the same machine, 2026-11-26).
-4. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)).
-5. A concept note 03 for 5 pieces: scoring speed (compile programs to numpy over the whole table or to C, or estimate exceptions from a sample during the search and count exactly only for the best programs), the table source (question 3 above), the brief's scaling test (operations per position against the number of pieces), and the token spend per endgame: when a paid search stops, measured in bytes saved per dollar rather than a fixed number of proposals.
+1. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)).
+2. A concept note 03 for 5 pieces: scoring speed (compile programs to numpy over the whole table or to C, or estimate exceptions from a sample during the search and count exactly only for the best programs), the table source (question 4 above), the brief's scaling test (operations per position against the number of pieces), and the token spend per endgame: when a paid search stops, measured in bytes saved per dollar rather than a fixed number of proposals.
 
 ### First try of trimming and review (2026-11-25, 10 rejected programs of run r1)
 
@@ -129,7 +112,8 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Gotchas
 
 - The language fingerprint is pinned in a test. Any change of names, costs or limits needs a `DSL_VERSION` bump and a new pin, and all scores are redone.
-- Every score includes 32 operations for an exception lookup when there are errors (an assumption).
+- Every score includes 32 operations for an exception lookup when there are errors (an assumption, also after real sizes: the Elias–Fano lookup was not counted).
+- The plot shows the score (a bound); the comparison with Syzygy in the report uses real bytes.
 - The API key is only visible to interactive shells (`.zshrc`), so a script started from Claude Code needs `zsh -ic '...'`. Never print it.
 - A run's islands are fixed when it starts. Run r1 has the old islands (256, 1,024, 1,024, 4,096); continuing it needs those.
 - Learned baselines use all positions (there is no hold-out), because exceptions are charged. Net training is seeded, but another BLAS may shift it; the saved nets are exact integers.
@@ -139,8 +123,7 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. Close KPK, all free: the plan above.
-3. Concept note 03 for 5 pieces (above).
-4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
-5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
-6. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
+2. Concept note 03 for 5 pieces (above).
+3. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
+4. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
+5. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.

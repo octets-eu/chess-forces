@@ -75,7 +75,7 @@ def _markdown(report: Report) -> str:
         "",
         (
             f"Task: KPK, 165,676 positions, table sha256 {report.table}. Language: {report.dsl}. "
-            "Every number is total bytes: program or model size plus exceptions. For programs and learned "
+            "Total bytes is the score: program or model size plus exceptions. For programs and learned "
             "models both parts are information bounds (grammar code or an adaptive code over the weights, "
             "and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word "
             "operations, maximum over all positions, with 32 added for an exception lookup whenever there "

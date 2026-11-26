@@ -1,6 +1,6 @@
 # KPK report
 
-Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c88c9d7bdbdf7b61c76c666293c0. Language: dsl 0.2 acd01c74a7d2eb2c. Every number is total bytes: program or model size plus exceptions. For programs and learned models both parts are information bounds (grammar code or an adaptive code over the weights, and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word operations, maximum over all positions, with 32 added for an exception lookup whenever there are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate.
+Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c88c9d7bdbdf7b61c76c666293c0. Language: dsl 0.2 acd01c74a7d2eb2c. Total bytes is the score: program or model size plus exceptions. For programs and learned models both parts are information bounds (grammar code or an adaptive code over the weights, and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word operations, maximum over all positions, with 32 added for an exception lookup whenever there are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate.
 
 ## Against the target: Syzygy
 

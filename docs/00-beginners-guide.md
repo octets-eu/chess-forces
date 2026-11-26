@@ -93,11 +93,11 @@ In words: the pawn needs n moves. The white king must not stand in the pawn's wa
 
 Every dot is a method. Lower and further left is better: less total length and less work. Blue circles are programs in our language, orange triangles are learned methods, green squares are tables. The dashed line is the Syzygy file, the target.
 
-As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md)):
+As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md); the full write-up: [analysis.md](../endgames/kpk/analysis.md)):
 
-- Three programs in our language are smaller than the Syzygy file for KPK (7,824 bytes). The best one, found by the AI, needs 4,459 bytes and at most 959 steps; the hand-written rules need 5,639 bytes.
-- That is a weak test. KPK is so small that a compressed table (3,341 bytes) and a small neural network (2,178 bytes) are smaller still. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
-- Two cautions. Our sizes are computed as the shortest possible encoding, while Syzygy's is a real file, so a real file of ours would be somewhat larger. And Syzygy's steps were not counted.
+- Five programs in our language are smaller than the Syzygy file for KPK (7,824 bytes), measured as real files that can be decoded again. The best one, found by the AI, needs 4,886 bytes and at most 1,259 steps; the hand-written rules need 6,207 bytes. Syzygy needs an estimated 2,100 steps at most.
+- That is a weak test. KPK is so small that a compressed table (3,341 bytes) and a small neural network (2,351 bytes) are smaller still. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
+- The plot shows the score, which is the shortest possible encoding; a real file is about 10% larger. The comparison with Syzygy uses the real files.
 - The ideas the programs use are known chess: the rule of the square, opposition, key squares, the rook-pawn corner.
 - An earlier statement that the AI had beaten the neural networks was wrong, because the networks we compared with were too weak.
 
