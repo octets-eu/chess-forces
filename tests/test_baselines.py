@@ -82,3 +82,5 @@ def test_promoted_r1_programs_are_pinned():
     u = score.score((report.PROGRAMS / "r1-unit-831.dsl").read_text(), task)
     assert u.errors == 5_363 and u.ops_max == 1_259 and u.tier == 4096
     assert u.bytes_total < t.bytes_total < 4_431
+    f = score.score((report.PROGRAMS / "forcetree-0064.dsl").read_text(), task)
+    assert f.errors == 4_505 and f.ops_max == 1_355 and f.tier == 4096

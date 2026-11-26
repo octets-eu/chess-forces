@@ -1,6 +1,6 @@
 # KPK: analysis
 
-Closed on 2026-11-26. Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.2 (fingerprint acd01c74a7d2eb2c), table sha256 03e81336…
+First pass finished on 2026-11-26 and reviewed the same day; the review (last section) reopened KPK. Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.2 (fingerprint acd01c74a7d2eb2c), table sha256 03e81336…
 
 ![Size against compute, KPK](report.png)
 
@@ -10,10 +10,11 @@ Can a short program in the force language, plus the list of positions it gets wr
 
 ## Result
 
-Yes. Five force programs are smaller than the Syzygy file, counted in real bytes, at a comparable number of operations.
+Yes. Six force programs are smaller than the Syzygy file, counted in real bytes, at a comparable number of operations.
 
 | Program | Real bytes | Against Syzygy | Bound (score) | Errors | Operations, mean / max |
 | --- | ---: | ---: | ---: | ---: | ---: |
+| `forcetree-0064` | 4,480 | −43% | 4,137 | 4,505 | 498 / 1,355 |
 | `r1-unit-831` | 4,886 | −38% | 4,426 | 5,363 | 403 / 1,259 |
 | `r1-trimmed-966` | 4,890 | −38% | 4,430 | 5,398 | 356 / 1,019 |
 | `evolved-1024` | 4,920 | −37% | 4,459 | 5,426 | 361 / 959 |
@@ -36,7 +37,7 @@ Yes. Five force programs are smaller than the Syzygy file, counted in real bytes
 
 A small net needs half the bytes of the best program at a fifth of its worst case, and a general compressor is smaller too if compute is ignored.
 
-Nets can also be exact. 29 nets from the training sweep answer every position with no exception list; all are kept in `nets/` (retrained from the sweep record, checksums identical) and listed in the report. The smallest, relative3 with 48 hidden units, is 4,018 B real (3,795 B score) at 611 operations; the fastest, relative3 with 24 hidden units, is 4,783 B at 323. Both are smaller than Syzygy. No force program is exact. KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
+Nets can also be exact. 29 nets from the training sweep answer every position with no exception list; all are kept in `nets/` (retrained from the sweep record, checksums identical) and listed in the report. The smallest, relative3 with 48 hidden units, is 4,018 B real (3,795 B score) at 611 operations; the fastest, relative3 with 24 hidden units, is 4,783 B at 323. Both are smaller than Syzygy. No force program within the language's limits is exact (see the review below for one beyond them). KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
 ## What the programs know
 
 The programs are readable and use textbook ideas: the rule of the square, key squares in front of the pawn, the opposition, the rook-pawn corner, a loose pawn the weak king reaches first, a blockade in front of the pawn, the weak king taking the pawn. `r1-unit-831` is 20 lines; its program part is 156 B, the other 4,270 B (bound) are its 5,363 exceptions. Run r1 combined these ideas compactly; it found no new concept.
@@ -58,10 +59,27 @@ Where the best program is still wrong (`uv run chess-forces score endgames/kpk/p
 
 ## Open in KPK
 
-- No force program is exact. An exact description of about 4 KB exists (the nets above); whether the force language has one of similar size is not known. A near-exact program would also do: with 100 errors the exception list costs only 153 B (bound), against 4,270 B at 5,363 errors. Run r1 stayed with programs of about 150 B; the region between was not searched.
+- No exact force program fits the language's limits. An exact DSL program of 7,110 B exists beyond them (review below), an exact net of 4,018 B; whether the force language has an exact description near the nets' size is not known.
 - The frontier of force programs is not exhausted: the best net is 2,351 B real at 235 operations, half the best program.
 - The lookup of a listed exception is charged 32 operations, an assumption; the Elias–Fano lookup was not counted.
 - Syzygy's operations are an estimate with hand-priced steps, not a measurement of an engine.
+
+## Review after the first pass (2026-11-26)
+
+Two questions after closing: is there an exact method, and are the 5,363 exceptions of the best program a limit of the language or of the search? `uv run python scripts/force_trees.py` takes the 10 concepts of `r1-unit-831` (blocked, adj, runs, support, reach, blockade, cap, aligned, opp, near), adds the 13 simple features of the tree baselines, grows greedy trees and writes each one as a DSL program; no model is involved.
+
+| Features | Leaves | Errors | Real bytes | Max ops | Fits the language's limits |
+| --- | ---: | ---: | ---: | ---: | --- |
+| simple only | 2,926 | 0 | 10,672 | 157 | no: source over 40,000 characters |
+| simple + concepts | 64 | 4,505 | 4,480 | 1,355 | yes, promoted as `forcetree-0064` |
+| simple + concepts | 256 | 2,378 | 3,577 | 1,357 | no: source over 40,000 characters |
+| simple + concepts | 1,024 | 534 | 4,770 | 1,357 | no: source over 40,000 characters |
+| simple + concepts | 1,800 | 0 | 7,110 | 1,325 | no: source over 40,000 characters |
+
+- The language can describe KPK exactly, and with the force concepts the exact program (7,110 B) is smaller than Syzygy at fewer operations than Syzygy's estimate. The concepts carry information: without them the exact tree needs 10,672 B.
+- The 3.2% errors of run r1 were a limit of the search: a greedy tree over r1's own concepts, found in seconds, reaches 3,577 B real with 256 leaves, 27% below `r1-unit-831`.
+- What held these programs back is a limit on text, not on information: the 256-leaf tree is 1,143 B of grammar code but over 40,000 characters, because nested ifs are deeply indented.
+- The nets stay ahead for exactness (4,018 B against 7,110 B): a net keeps a fact in a 4-bit weight, the language has to spell it out as a branch. Greedy trees are upper bounds; better concepts or encodings would shrink the programs, by how much is untested.
 
 ## Reproduce
 
@@ -69,5 +87,6 @@ Where the best program is still wrong (`uv run chess-forces score endgames/kpk/p
 uv run chess-forces report                                   # report.md, report.json, report.png
 uv run chess-forces score endgames/kpk/programs/r1-unit-831.dsl
 uv run python scripts/syzygy_ops.py                          # syzygy.json, needs ../syzygy
+uv run python scripts/force_trees.py                         # trees over force concepts, written as DSL
 uv run pytest                                                # includes the Syzygy check of every position
 ```

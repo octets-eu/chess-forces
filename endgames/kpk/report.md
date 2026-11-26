@@ -8,6 +8,7 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 
 | Force program | Real bytes | Bound | Max ops | Against Syzygy |
 | --- | ---: | ---: | ---: | ---: |
+| forcetree-0064 | 4,480 | 4,137 | 1,355 | -3,344 B (-43%) |
 | r1-unit-831 | 4,886 | 4,426 | 1,259 | -2,938 B (-38%) |
 | r1-trimmed-966 | 4,890 | 4,430 | 1,019 | -2,934 B (-38%) |
 | evolved-1024 | 4,920 | 4,459 | 959 | -2,904 B (-37%) |
@@ -61,6 +62,7 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 
 | | Total bytes | Real bytes | Model | Exceptions | Errors | Max ops |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| forcetree-0064 | 4,137 | 4,480 | 405.5 | 3,731.2 | 4,505 | 1,355 |
 | r1-unit-831 | 4,426 | 4,886 | 156.1 | 4,270.4 | 5,363 | 1,259 |
 | r1-trimmed-966 | 4,430 | 4,890 | 138.3 | 4,291.8 | 5,398 | 1,019 |
 | evolved-1024 | 4,459 | 4,920 | 150.3 | 4,308.9 | 5,426 | 959 |
@@ -130,7 +132,7 @@ Tables and learned models are references, not targets: they show how much of a w
 | 64 | 5,681 B (net pairs3 additive, 5 bit) | 18,914 B (always_win) | +13,233 B |
 | 256 | 2,178 B (net relative3 14 hidden, 4 bit) | 5,367 B (evolved-256) | +3,190 B |
 | 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,430 B (r1-trimmed-966) | +2,252 B |
-| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,426 B (r1-unit-831) | +2,249 B |
+| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,137 B (forcetree-0064) | +1,959 B |
 
 ★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations are an estimate (see above); lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 

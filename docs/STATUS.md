@@ -12,10 +12,11 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ## Where things stand
 
-- **KPK is closed** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). Five force programs are smaller than Syzygy's `KPvK.rtbw` (7,824 B) in real bytes: the best, `r1-unit-831`, is 4,886 B (−38%) at 1,259 operations at most, 403 on average; Syzygy needs an estimated 2,122 at most, 983 on average. Real bytes are an actual encoding (`codec.py`), about 10% above the score's bound.
+- **KPK: first pass finished and reviewed** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). The review reopened it (below). Five force programs from the first pass are smaller than Syzygy's `KPvK.rtbw` (7,824 B) in real bytes: the best, `r1-unit-831`, is 4,886 B (−38%) at 1,259 operations at most, 403 on average; Syzygy needs an estimated 2,122 at most, 983 on average. Real bytes are an actual encoding (`codec.py`), about 10% above the score's bound.
 - References are smaller still: a table net 2,351 B real at 235 operations, lzma of the bitbase 3,341 B at an estimated 282,600. 29 nets are exact (no exceptions); the smallest is 4,018 B real at 611 operations. Every exact method is kept and shown in the report in its own colour. No force program is exact. At KPK, beating Syzygy says more about Syzygy's general format than about the concepts; the real test is 5 pieces and more.
 - What the search found is known chess (square, key squares, opposition, rook-pawn corner, blockade, captures), not new concepts. Programs are small (about 150 B); almost all their cost is exceptions, most of them with a central pawn on ranks 2 to 4.
-- Phase 1 is done and a single-user search loop exists (one run, r1). 180 tests pass.
+- Review of KPK (`scripts/force_trees.py`, no model): a greedy tree over the 10 concepts of r1's best program is an exact DSL program of 7,110 B, smaller than Syzygy; with 256 leaves it is 3,577 B real, 27% below r1's best. The 3.2% errors were a limit of the search, not of the language. Both programs are over the language's 40,000-character limit, a limit on text rather than information; the 64-leaf tree fits and is promoted (`forcetree-0064`, 4,480 B real).
+- Phase 1 is done and a single-user search loop exists (one run, r1). 182 tests pass.
 - Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git
@@ -45,7 +46,7 @@ uv run chess-forces evolve --run r2 --usd 3   # needs the API key and the owner'
 
 ## Decisions taken
 
-D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a dev dependency; grammar code for size; log2 C(N, k) for exceptions; operation tiers 64, 256, 1,024, 4,096; default budget 20 per day, scripts stop and resume, only the owner raises limits; funsearch is not copied, its island and cluster idea may be adapted later (Apache-2.0). On 2026-11-26: the target is the Syzygy file of each endgame within the 4,096-operation cap; nets, trees and lzma are references; no paid search on KPK; KPK closes with a written analysis; endgames of 5 pieces and more are the real test.
+D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a dev dependency; grammar code for size; log2 C(N, k) for exceptions; operation tiers 64, 256, 1,024, 4,096; default budget 20 per day, scripts stop and resume, only the owner raises limits; funsearch is not copied, its island and cluster idea may be adapted later (Apache-2.0). On 2026-11-26: keep every promising approach and block nothing that might help beyond the current endgame; a finished endgame is reviewed and may be run again. Also on 2026-11-26: the target is the Syzygy file of each endgame within the 4,096-operation cap; nets, trees and lzma are references; no paid search on KPK; KPK closes with a written analysis; endgames of 5 pieces and more are the real test.
 
 ## Waiting for the owner
 
@@ -53,8 +54,23 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 2. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
 3. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
 4. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
+5. KPK second pass, all free: (a) language limits counted in bits of grammar code instead of characters, so the 256-leaf and exact trees fit (a language change: `DSL_VERSION` bump, every score redone); (b) concepts by enumeration of small DSL expressions, combined by trees, against r1's concepts at equal size; (c) the trimmer and the reviewer script moved from `state/scripts` into `scripts/`, so no approach lives only on one machine.
 
-## KPK closed (2026-11-26)
+## Approaches, all kept
+
+| Approach | Cost | What it gave on KPK | Where |
+| --- | --- | --- | --- |
+| Search loop: a model proposes whole programs | tokens | textbook concepts, best 4,426 B (bound) | `search.py`, run r1 |
+| Mechanical trimming, no model | free | r1 program 966 from 4,476 to 4,430 B | `state/scripts/trim.py` (local) |
+| Reviewer models on rejected programs | tokens | one useful variant (4,472 B at 388 operations) | `state/scripts/review.py` (local) |
+| Trees over force concepts, written as DSL | free | exact program 7,110 B; 3,577 B real at 256 leaves | `scripts/force_trees.py` |
+| Decision trees over simple features | free | reference; exact at 10,672 B | `chess-forces trees`, `scripts/force_trees.py` |
+| Table nets | free (CPU) | reference; 29 exact, smallest 4,018 B real | `nets.py`, `chess-forces train-nets` |
+| Concepts found by enumeration of small DSL expressions | free | not built | proposed 2026-11-26 |
+| Concepts by a model, combined by a tree | tokens for concepts only | not built | proposed 2026-11-26 |
+| Keep every program, check every tier (soft cap) | free | not built; would have kept program 831 | agreed ideas below |
+
+## KPK first pass (2026-11-26)
 
 Done on branch `close-kpk`, one commit per step: one folder per endgame (`endgames/kpk/`, the folder decides the endgame); the report plots every program in `programs/`, named by file; `chess-forces promote`, which the search also calls at the end of a run, promoted the trimmed r1 program (4,430 B) and r1 proposal 831 (4,426 B, recovered from the run's ledger); real sizes next to the bounds (`codec.py`, decoded back in the tests); Syzygy's operations estimated (`scripts/syzygy_ops.py`); lzma's operations pinned to one timing, so two report runs give identical files; [analysis.md](../endgames/kpk/analysis.md).
 
@@ -123,7 +139,8 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. Concept note 03 for 5 pieces (above).
-3. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
-4. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
-5. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
+2. KPK second pass (question 5), then a new review.
+3. Concept note 03 for 5 pieces (above).
+4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
+5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
+6. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
