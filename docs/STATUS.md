@@ -22,7 +22,7 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 ## Git
 
 - `main` is published on GitHub (first push 2026-11-25). Feature branches stay local. Commit as `operator`, no attribution lines, only when asked; never push without asking.
-- `main` holds everything up to the concept loop (2026-11-26); the work branches `close-kpk`, `kpk-pass2` and `concept-loop` are merged into it.
+- `main` holds everything up to the concept loop and is pushed (2026-11-26); the work branches `close-kpk`, `kpk-pass2` and `concept-loop` were merged into it and deleted.
 
 ## Where things are
 
@@ -57,10 +57,9 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 
 ## Waiting for the owner
 
-1. Push `main` to GitHub (it is merged locally)?
-2. Next endgame: KQvKP (recommended; queen against pawn, rich structure) or KQPvK (almost always a win, 12.5 KB)?
-3. Its table: read from Syzygy by a script outside `src/` (quick; a local pilot exists), or the project's own rules code first (the rule so far; KQvKP needs promotion and underpromotion, a large job)?
-4. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? The paid part (reviewer, grants) needs its own short concept and a cost cap first.
+1. Next endgame: KQvKP (recommended; queen against pawn, rich structure) or KQPvK (almost always a win, 12.5 KB)?
+2. Its table: read from Syzygy by a script outside `src/` (quick; a local pilot exists), or the project's own rules code first (the rule so far; KQvKP needs promotion and underpromotion, a large job)?
+3. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? The paid part (reviewer, grants) needs its own short concept and a cost cap first.
 
 ## Approaches, all kept
 
@@ -108,7 +107,7 @@ Open point: whether the review beats the simpler steering in loop v2 is unknown 
 **A search aimed at Syzygy.** Agreed 2026-11-26. Real sizes, Syzygy's operations and a pinned lzma timing are built (above); open:
 
 1. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)).
-2. Concept note 04 for the next endgame (KQvKP) and beyond: the table source (question 3 above); language additions for a weak pawn and a queen (version 0.4); scale (scoring speed, trees over millions of positions in 24 GB: fewer features, or judging candidates on a fixed sample and checking finalists on every position); the test of model concepts against a saturated enumeration (the KPK lesson); the brief's scaling test (operations per position against the number of pieces); and the token spend per endgame, measured in bytes saved per dollar.
+2. Concept note 04 for the next endgame (KQvKP) and beyond: the table source (question 2 above); language additions for a weak pawn and a queen (version 0.4); scale (scoring speed, trees over millions of positions in 24 GB: fewer features, or judging candidates on a fixed sample and checking finalists on every position); the test of model concepts against a saturated enumeration (the KPK lesson); the brief's scaling test (operations per position against the number of pieces); and the token spend per endgame, measured in bytes saved per dollar.
 
 ### First try of trimming and review (2026-11-25, 10 rejected programs of run r1)
 
