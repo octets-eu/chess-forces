@@ -57,6 +57,14 @@ def _train_nets(_args) -> int:
     return 0
 
 
+def _trees(_args) -> int:
+    from . import baselines, score
+
+    for path in baselines.write_trees(score.kpk_task()):
+        print(f"wrote {path}")
+    return 0
+
+
 def _report(_args) -> int:
     from . import report as rep
 
@@ -183,6 +191,9 @@ def main(argv=None) -> int:
     sub.add_parser(
         "report", help="baselines, frontier and plot for KPK (about a minute)"
     ).set_defaults(fn=_report)
+    sub.add_parser(
+        "trees", help="retrain the decision-tree baselines and write programs/trees/*.dsl"
+    ).set_defaults(fn=_trees)
     ev = sub.add_parser("evolve", help="run the search loop (spends API money)")
     ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")
     ev.add_argument("--usd", required=True, help="hard limit for this run in USD")

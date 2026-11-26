@@ -10,7 +10,6 @@ from .baselines import Point
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "reports"
 PROGRAMS = ROOT / "programs"
-TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
 PROGRAM_NAMES = {
     "always_win": "always win",
     "square": "rule of the square",
@@ -48,10 +47,10 @@ def pareto(points: list[Point]) -> list[Point]:
     return front
 
 
-def build(leaves=TREE_LEAVES) -> Report:
+def build() -> Report:
     task = score.kpk_task()
     points = list(baselines.table_points())
-    points += baselines.tree_points(task, leaves)
+    points += baselines.tree_points(task)
     points += baselines.net_points(task)
     for path, label in PROGRAM_NAMES.items():
         points.append(
@@ -80,15 +79,43 @@ def write(report: Report, out: Path = OUT) -> list[Path]:
 
 def _markdown(report: Report) -> str:
     lines = [
-        "# KPK baselines",
+        "# KPK report",
         "",
         (
             f"Task: KPK, 165,676 positions, table sha256 {report.table}. Language: {report.dsl}. "
-            "Every number is total bytes: program or model size plus exceptions (log2 C(N, k), see "
-            "docs/01-dsl-concept.md). Operations are 64-bit word operations, maximum over all positions, "
-            "with 32 added for an exception lookup whenever there are errors. "
-            "Marked with a dash: operations not measured. Marked (est): a rough estimate."
+            "Every number is total bytes: program or model size plus exceptions. For programs and learned "
+            "models both parts are information bounds (grammar code or an adaptive code over the weights, "
+            "and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word "
+            "operations, maximum over all positions, with 32 added for an exception lookup whenever there "
+            "are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate."
         ),
+    ]
+    syz = next((p for p in report.points if p.kind == "table" and p.ops_max is None), None)
+    force = sorted((p for p in report.points if p.kind == "force"), key=lambda p: p.bytes_total)
+    if syz:
+        lines += [
+            "",
+            "## Against the target: Syzygy",
+            "",
+            (
+                f"The target is the Syzygy file of the endgame, with at most 4,096 operations per position: "
+                f"{syz.name}, {syz.bytes_total:,.0f} B on disk, operations not measured. The sizes of the "
+                "programs are information bounds, Syzygy's is a real file; real encodings are not in this "
+                "report yet."
+            ),
+            "",
+            "| Force program | Total bytes | Max ops | Against Syzygy |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+        for p in force:
+            d = p.bytes_total - syz.bytes_total
+            lines.append(
+                f"| {p.name} | {p.bytes_total:,.0f} | {p.ops_max:,.0f} | "
+                f"{d:+,.0f} B ({d / syz.bytes_total:+.0%}) |"
+            )
+    lines += [
+        "",
+        "## All methods",
         "",
         "| | Total bytes | Model | Exceptions | Errors | Max ops |",
         "| --- | ---: | ---: | ---: | ---: | ---: |",
@@ -105,11 +132,15 @@ def _markdown(report: Report) -> str:
         )
     lines += [
         "",
-        "## What a force program has to beat",
+        "## References per tier",
         "",
-        "Per operation tier: the smallest total among tables and learned models with counted operations, and the best force program at the same budget.",
+        (
+            "Tables and learned models are references, not targets: they show how much of a win over "
+            "Syzygy comes from the concepts and how much from Syzygy's general file format. Per operation "
+            "tier: the smallest reference with counted operations, and the best force program at the same budget."
+        ),
         "",
-        "| Tier | Best other method | Best force program | Difference |",
+        "| Tier | Best reference | Best force program | Difference |",
         "| ---: | --- | --- | ---: |",
     ]
     for tier in dsl.TIERS:
@@ -121,9 +152,9 @@ def _markdown(report: Report) -> str:
             and not p.estimated_ops
             and p.ops_max <= tier
         ]
-        force = [p for p in report.points if p.kind == "force" and p.ops_max <= tier]
+        fits = [p for p in force if p.ops_max <= tier]
         best_o = min(others, key=lambda p: p.bytes_total)
-        best_f = min(force, key=lambda p: p.bytes_total)
+        best_f = min(fits, key=lambda p: p.bytes_total)
         lines.append(
             f"| {tier:,} | {best_o.bytes_total:,.0f} B ({best_o.name}) | {best_f.bytes_total:,.0f} B ({best_f.name}) | "
             f"{best_f.bytes_total - best_o.bytes_total:+,.0f} B |"
@@ -133,9 +164,11 @@ def _markdown(report: Report) -> str:
         (
             "★ on the frontier of counted points (smallest total bytes at or below that operation count). "
             "Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come "
-            "from decompression time (rough), because a single position needs the whole file unpacked. "
+            "from decompression time (rough, and different on every run), because a single position needs "
+            "the whole file unpacked. "
             "Learned baselines are trained on all positions and their exceptions are charged. The decision "
-            "trees are written as DSL programs. The nets (src/chess_forces/nets.py) look up one row per square or "
+            "trees are DSL programs in programs/trees, retrained only by chess-forces trees. The nets "
+            "(src/chess_forces/nets.py) look up one row per square or "
             "square pair, add the rows and apply a small output layer; weights are integers, stored in "
             "baselines/nets and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an "
             "adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); "
@@ -144,8 +177,8 @@ def _markdown(report: Report) -> str:
         ),
         "",
         (
-            "Hand-written programs: programs/*.dsl. The human rules were written from chess theory and "
-            "tuned by looking at groups of mistakes over about 20 quick runs."
+            "Force programs: programs/*.dsl, hand-written or found by search. The human rules were written "
+            "from chess theory and tuned by looking at groups of mistakes over about 20 quick runs."
         ),
     ]
     return "\n".join(lines) + "\n"
@@ -170,8 +203,8 @@ def _plot(report: Report, path: Path) -> None:
     fig, ax = plt.subplots(figsize=(10.5, 6.6), dpi=150, facecolor=SURFACE)
     ax.set_facecolor(SURFACE)
     style = {
-        "table": (AQUA, "s", "Tables and decoders"),
-        "learned": (ORANGE, "^", "Learned (tree, net)"),
+        "table": (AQUA, "s", "Table references"),
+        "learned": (ORANGE, "^", "Learned references (tree, net)"),
         "force": (BLUE, "o", "Force-language programs"),
     }
     for kind, (color, marker, label) in style.items():
@@ -216,7 +249,7 @@ def _plot(report: Report, path: Path) -> None:
         ax.text(
             0.985,
             syz.bytes_total * 1.07,
-            f"{syz.name}: {syz.bytes_total:,.0f} B, operations not measured",
+            f"Target: {syz.name}, {syz.bytes_total:,.0f} B (operations not measured)",
             color=INK_2,
             fontsize=9,
             ha="right",

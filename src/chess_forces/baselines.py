@@ -18,7 +18,10 @@ import numpy as np
 from . import kpk, nets, score
 from .dsl import TIERS, Position
 
-SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", Path(__file__).resolve().parents[3] / "syzygy"))
+ROOT = Path(__file__).resolve().parents[2]
+SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", ROOT.parent / "syzygy"))
+TREES_DIR = ROOT / "programs" / "trees"
+TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
 
 
 @dataclass
@@ -184,11 +187,12 @@ def feature_matrix(task: score.Task) -> np.ndarray:
     return np.stack(cols, axis=1)
 
 
-def tree_program(tree, names: list[str]) -> str:
-    """sklearn tree to DSL text. Features used are named once at the top."""
+def tree_program(tree, names: list[str], doc: str = "") -> str:
+    """sklearn tree to DSL text. Features used are named once at the top; doc becomes the docstring."""
     t = tree.tree_
     used = sorted({int(i) for i in t.feature if i >= 0})
-    lines = [f"    x{i} = {FEATURES[names[i]]}" for i in used]
+    lines = [f'    """{doc}"""'] if doc else []
+    lines += [f"    x{i} = {FEATURES[names[i]]}" for i in used]
 
     def emit(node: int, depth: int) -> None:
         pad = "    " * depth
@@ -206,31 +210,58 @@ def tree_program(tree, names: list[str]) -> str:
     return "\n".join(body) + "\n"
 
 
-def tree_points(
-    task: score.Task, leaves=(2, 4, 6, 8, 12, 16, 24, 32, 48, 64), seed: int = 0
-) -> list[Point]:
+def train_trees(task: score.Task, leaves=TREE_LEAVES, seed: int = 0) -> dict[int, str]:
+    """Greedy entropy trees as DSL text, by leaf count. Raises if a program and its tree disagree."""
     from sklearn.tree import DecisionTreeClassifier
 
     names = list(FEATURES)
     x = feature_matrix(task)
     y = np.array(task.truth)
-    out = []
+    out = {}
     for n in leaves:
         tree = DecisionTreeClassifier(max_leaf_nodes=n, criterion="entropy", random_state=seed).fit(
             x, y
         )
-        text = tree_program(tree, names)
+        doc = (
+            f"Decision tree, {n} leaves: scikit-learn DecisionTreeClassifier(max_leaf_nodes={n}, "
+            f'criterion="entropy", random_state={seed}) on all positions, written by '
+            "chess-forces trees. Learned, not a force program."
+        )
+        text = tree_program(tree, names, doc)
         r = score.score(text, task)
-        got = y != tree.predict(x)
-        if int(got.sum()) != r.errors:
+        if int((y != tree.predict(x)).sum()) != r.errors:
             raise AssertionError("tree program disagrees with the tree it was made from")
+        out[n] = text
+    return out
+
+
+def tree_path(n: int, directory: Path = TREES_DIR) -> Path:
+    return directory / f"tree-{n:03d}.dsl"
+
+
+def write_trees(task: score.Task, leaves=TREE_LEAVES, directory: Path = TREES_DIR) -> list[Path]:
+    """Retrain the trees and save them as programs; the report reads these files, it does not train."""
+    directory.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for n, text in train_trees(task, leaves).items():
+        paths.append(tree_path(n, directory))
+        paths[-1].write_text(text)
+    return paths
+
+
+def tree_points(task: score.Task, directory: Path = TREES_DIR) -> list[Point]:
+    """The saved trees (programs/trees/tree-NNN.dsl), scored like any program."""
+    out = []
+    for path in sorted(directory.glob("tree-*.dsl")):
+        n = int(path.stem.split("-")[1])
+        r = score.score(path.read_text(), task)
         out.append(
             _from_report(
                 f"decision tree, {n} leaves",
                 "learned",
                 r,
-                "greedy entropy tree as a DSL program",
-                text,
+                f"greedy entropy tree as a DSL program, {path.relative_to(ROOT)}",
+                path.read_text(),
             )
         )
     return out
@@ -291,5 +322,7 @@ __all__ = [
     "net_points",
     "program_point",
     "table_points",
+    "train_trees",
     "tree_points",
+    "write_trees",
 ]

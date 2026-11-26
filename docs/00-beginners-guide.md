@@ -8,6 +8,8 @@ Chess endgames with few pieces are completely solved. For every position the tru
 
 The goal is not to play chess well. It is to find out how short a correct description can be. A short description that works on many positions is what we call understanding; a huge list of answers is just memory.
 
+The yardstick is *Syzygy*, the standard tablebase format. A program plus its list of mistakes must be smaller than the Syzygy file of the endgame, and it must still answer each position quickly. Small endgames are only practice: the interesting ones have five pieces or more, where Syzygy files are megabytes.
+
 ## The example we work on: KPK
 
 KPK means: White has a king and one pawn, Black has only a king. White wants to bring the pawn to the last rank, where it becomes a queen. Black tries to stop that. If both play perfectly, White either wins or the game is a draw.
@@ -62,7 +64,7 @@ How we count *held*: a net holds one byte for each of its numbers; a program hol
 
 How much may be held? The plan (not built yet): no single fixed limit. A hard limit could throw away a good solution that is one byte too large, so results will be shown at several limits, with near misses listed next to them, and programs over a limit will be kept and looked at again. Which limit is used matters: with little memory allowed our programs look better, with more memory the neural networks do.
 
-For speed there are four classes: 64, 256, 1,024 and 4,096 steps. We compare methods within a class.
+A program may use at most 4,096 steps per position. For comparisons with other methods there are four speed classes: 64, 256, 1,024 and 4,096 steps.
 
 ## The language
 
@@ -82,30 +84,28 @@ In words: the pawn needs n moves. The white king must not stand in the pawn's wa
 
 1. Built the table of true answers.
 2. Built the language, the checker that counts steps, and the score.
-3. Built other methods to compare with: a compressed table, decision trees, small neural networks, and hand-written rules.
+3. Built other methods as references: a compressed table, decision trees and small neural networks. Wrote rules by hand.
 4. Let an AI (Claude Haiku) write programs. A computer checked each one against all 165,676 positions and kept the good ones. This ran once, with 1,076 attempts.
 
 ## What came out so far
 
 ![Size against work, KPK](../reports/kpk.png)
 
-Every dot is a method. Lower and further left is better: less total length and less work. Blue circles are programs in our language, orange triangles are learned methods, green squares are tables.
+Every dot is a method. Lower and further left is better: less total length and less work. Blue circles are programs in our language, orange triangles are learned methods, green squares are tables. The dashed line is the Syzygy file, the target.
 
-| Method | Total length | Worst-case steps |
-| --- | ---: | ---: |
-| List of answers (bitbase) | 24,576 bytes | 20 |
-| Tablebase file (Syzygy) | 7,824 bytes | not measured |
-| Hand-written human rules | 5,639 bytes | 273 |
-| Best program the AI found (fast) | 5,367 bytes | 232 |
-| Best program the AI found (slower) | 4,459 bytes | 959 |
-| Best small neural network | **2,178 bytes** | 235 |
+As of 2026-11-26 (current numbers: [reports/kpk.md](../reports/kpk.md)):
 
-In short: the rules found so far are known chess ideas (the rule of the square, opposition, key squares, the rook-pawn corner). The AI improved the hand-written rules, but a well-trained small neural network is still much shorter, at about the same speed. An earlier statement that the AI had won was wrong, because the networks we compared with were too weak.
+- Three programs in our language are smaller than the Syzygy file for KPK (7,824 bytes). The best one, found by the AI, needs 4,459 bytes and at most 959 steps; the hand-written rules need 5,639 bytes.
+- That is a weak test. KPK is so small that a compressed table (3,341 bytes) and a small neural network (2,178 bytes) are smaller still. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
+- Two cautions. Our sizes are computed as the shortest possible encoding, while Syzygy's is a real file, so a real file of ours would be somewhat larger. And Syzygy's steps were not counted.
+- The ideas the programs use are known chess: the rule of the square, opposition, key squares, the rook-pawn corner.
+- An earlier statement that the AI had beaten the neural networks was wrong, because the networks we compared with were too weak.
 
 ## What we do not know yet
 
-- Can a program beat the neural network? Not shown.
-- Do ideas found in one endgame help in the next one? This is the real question. It is called *transfer*. Not tested; the next step is KQKP (king and queen against king and pawn).
+- Do programs stay smaller than Syzygy in endgames with five pieces and more, where the files are megabytes? This is the real question. Not tested.
+- Is the win in KPK more than the format? Syzygy's file is built for every endgame alike; the references show that KPK alone can be packed much smaller.
+- Do ideas found in one endgame help in the next one? This is called *transfer*. Not tested.
 - Does the AI find something new, rather than known chess ideas? Not so far.
 
 ## Try it yourself
@@ -126,8 +126,7 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 | --- | --- |
 | API, API key | The door through which programs talk to Claude. The key is the password; it is never stored in the code. |
 | Bitbase | A list with one yes/no bit for every position. |
-| Baseline | A method we compare with. |
-| Bar | The best result of other methods. A new program must beat it. |
+| Baseline, reference | Another method shown for comparison, not as a target: tables, decision trees, neural networks. |
 | Bytes held | What must be unpacked and kept in memory before the first answer. Data that can be read directly from its stored form does not count. |
 | Bytes stored | Everything that must be kept or sent: program (or net, or table) plus the list of mistakes. The score. |
 | Byte, bit | A bit is one yes/no. Eight bits are one byte. We measure length in bytes. |
@@ -167,11 +166,12 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 | Size (of a program) | The length of the program counted in bits, if every choice in it is written as briefly as possible. |
 | Stalemate | A side has no legal move, but is not in check. The game is a draw. |
 | Strong side, weak side | The side with the extra piece, and the other side. |
-| Syzygy | A public collection of tablebases. We use it only to check our own work. |
+| Syzygy | The standard public collection of tablebases. The size of its file is the target; we also use it to check our own table. |
 | Table net, neural network | A kind of learned calculator: it adds numbers looked up from small tables, and decides from the sum. |
 | Tablebase | A file with the exact result of every position of an endgame. |
+| Target | The size of the Syzygy file for an endgame. A program plus its list of mistakes must be smaller, within 4,096 steps. |
 | Tempo | Whose turn it is. |
-| Tier | A class of speed: at most 64, 256, 1,024 or 4,096 steps. |
+| Tier | A class of speed: at most 64, 256, 1,024 or 4,096 steps. Used to compare with references at the same speed. |
 | Token | A piece of text (about three quarters of a word). The AI is paid per token. |
 | Transfer | Using an idea from one endgame in another one. |
 | True result | Win, draw or loss with perfect play by both sides. |

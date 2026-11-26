@@ -5,14 +5,14 @@ Status: built; first run (r1) done on 2026-11-25 within a small, capped budget; 
 ## One unit of work
 
 1. Pick an island. Each island aims at one operation tier (256, 1,024, 1,024 and 4,096), so diversity comes from different compute budgets, not only from random restarts. Islands do not mix in v1.
-2. Build a prompt: the language and scoring rules (cached prefix), two parents from the island (the stronger one more often) with their scores, their largest error groups and a dozen wrong positions with the true result, the bar to beat at that tier (reports/kpk.md), and the last rejected proposals with the reason.
+2. Build a prompt: the language and scoring rules (cached prefix), two parents from the island (the stronger one more often) with their scores, their largest error groups and a dozen wrong positions with the true result, the bar at that tier (the best net or table in reports/kpk.md), and the last rejected proposals with the reason. Since 2026-11-26 the target is the endgame's Syzygy file and the nets are references; the prompt is to show the best force program of the tier and the Syzygy size instead (not built, STATUS).
 3. Claude (Haiku 5.5, medium effort) answers with one program. Anything that is not a single valid DSL program, or that needs more operations than the tier allows, is rejected locally and costs nothing beyond the call.
 4. Score it on all 165,676 positions, store it (program, score, error groups), skip duplicates by canonical hash.
 
 ## Parameters
 
 - Parent selection: rank-based, the best of the island three times as likely as the next, then random. The second parent is drawn from the top quarter.
-- Seeds: always win, rule of the square, human rules. Learned trees and nets are not seeded; they only set the bar.
+- Seeds: always win, rule of the square, human rules. Learned trees and nets are not seeded; they are references.
 - Stop: the run's spend limit (hard, on top of the daily and total limits of chess_forces.budget), a maximum number of units, or Ctrl-C. Resuming continues: prompts and answers are stored before and after each call, an answer that was paid for but not yet scored is scored on the next start.
 - Retries: rate limits are not billed and are retried; server errors are ambiguous, so their reservation stays counted and the unit is retried under a new one.
 - Cost model: every call is reserved at its worst case first (prompt bound from its length, plus the output limit, 9,000 tokens by default), settled afterwards from the API's usage numbers. Prompt caching is used for the fixed prefix.
@@ -31,7 +31,7 @@ Reflector (a stronger model proposing new primitives), migration between islands
 | 1,024 | 5,639 B | 4,459 B | 3,105 B (net, 32 units) | 2,178 B |
 | 4,096 | 5,639 B | 4,459 B | 2,837 B (net, 64 units) | 2,178 B |
 
-At the time, r1 looked like it won the 256-operation tier. Better-trained nets (table nets with few-bit weights, `src/chess_forces/nets.py`) then set the bar to 2,178 B for every tier from 235 operations up, so r1 is not a win anywhere. A force program at higher tiers still has room: nets do not get better with more operations, while programs can use them.
+At the time, r1 looked like it beat the nets in the 256-operation tier. Better-trained nets (table nets with few-bit weights, `src/chess_forces/nets.py`) then reached 2,178 B for every tier from 235 operations up, smaller than every force program. Against the target set on 2026-11-26, the Syzygy file (7,824 B), both r1 programs are smaller (5,367 B and 4,459 B).
 
 What changed the pace: after about 340 proposals, prompts began to show the strongest programs of the whole archive (even over the island's limit) and a rotating theme (opposition, flood, captures, rook-pawn corner, shortening, ...). Before that, the 256 island sat at 6,420 B; it dropped to 5,921 B within 100 proposals and to 5,367 B by the end.
 

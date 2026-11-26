@@ -6,13 +6,20 @@ from chess_forces import baselines, report, score
 from chess_forces.baselines import Point
 
 
-def test_tree_program_reproduces_the_tree_and_is_counted_in_dsl_units():
+def test_saved_trees_are_what_training_gives_now():
+    """programs/trees holds the tree baselines; retraining must give the same text, so a library
+    change is noticed. train_trees raises if a program and its tree disagree on any position."""
     task = score.kpk_task()
-    points = baselines.tree_points(task, leaves=(2, 8))
-    # tree_points raises if the program and the tree disagree on any position
-    assert points[0].kind == "learned" and points[0].ops_max is not None
-    assert points[1].errors < points[0].errors
-    assert points[1].bytes_total < points[0].bytes_total
+    trained = baselines.train_trees(task)
+    for n, text in trained.items():
+        assert baselines.tree_path(n).read_text() == text
+    assert sorted(baselines.TREES_DIR.glob("tree-*.dsl")) == [
+        baselines.tree_path(n) for n in trained
+    ]
+    points = baselines.tree_points(task)
+    assert [p.kind for p in points] == ["learned"] * len(trained)
+    assert all(p.ops_max is not None for p in points)
+    assert points[-1].errors < points[0].errors and points[-1].bytes_total < points[0].bytes_total
 
 
 def test_human_rules_are_pinned():
