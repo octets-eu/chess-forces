@@ -9,13 +9,6 @@ from .baselines import Point
 
 ENDGAME = endgames.KPK
 PROGRAMS = ENDGAME.programs
-PROGRAM_NAMES = {
-    "always_win": "always win",
-    "square": "rule of the square",
-    "human": "human rules",
-    "evolved-256": "evolved, 256 ops",
-    "evolved-1024": "evolved, 1,024 ops",
-}
 
 # categorical slots 1-3 of the reference palette (validated for scatter use, all pairs), chart inks
 BLUE, ORANGE, AQUA = "#257de0", "#f47230", "#00b894"
@@ -51,10 +44,10 @@ def build() -> Report:
     points = list(baselines.table_points())
     points += baselines.tree_points(task)
     points += baselines.net_points(task)
-    for path, label in PROGRAM_NAMES.items():
+    for path in sorted(PROGRAMS.glob("*.dsl")):
         points.append(
             baselines.program_point(
-                label, (PROGRAMS / f"{path}.dsl").read_text(), task, "DSL program, " + label
+                path.stem, path.read_text(), task, f"DSL program, programs/{path.name}"
             )
         )
     return Report(
@@ -273,12 +266,12 @@ def _plot(report: Report, path: Path) -> None:
     ax.legend(frameon=False, loc="upper right", fontsize=9)
     labels = {
         "bitbase (all slots)": (9, 4, "left"),
-        "always win": (9, 4, "left"),
-        "rule of the square": (9, 4, "left"),
+        "always_win": (9, 4, "left"),
+        "square": (9, 4, "left"),
         "decision tree, 64 leaves": (9, -4, "left"),
-        "human rules": (9, 6, "left"),
-        "evolved, 256 ops": (9, -14, "left"),
-        "evolved, 1,024 ops": (9, 6, "left"),
+        "human": (9, 6, "left"),
+        "evolved-256": (9, -14, "left"),
+        "evolved-1024": (9, 6, "left"),
         "lzma of the bitbase": (9, 6, "left"),
         "net pairs3 additive, 5 bit": (9, -14, "left"),
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
@@ -291,7 +284,8 @@ def _plot(report: Report, path: Path) -> None:
         for t in dsl.TIERS
     }
     for p in report.points:
-        if (p.name in labels or p.name in tier_best) and p.ops_max is not None:
+        named = p.name in labels or p.name in tier_best or p.kind == "force"
+        if named and p.ops_max is not None:
             dx, dy, ha = labels.get(p.name, (9, -4, "left"))
             text = p.name + (" (operations estimated)" if p.estimated_ops else "")
             ax.annotate(
