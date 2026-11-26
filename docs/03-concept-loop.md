@@ -40,6 +40,61 @@ The model must beat a strong enumeration, not a weak one. Before any paid call t
 
 The stronger enumeration alone gives an exact program of 2,789 B, smaller than the smallest exact net (4,018 B); with r1's concepts the exact program is 2,201 B, smaller than the best net with errors (2,351 B, 530 errors). The last row is the pool the paid run starts from; its programs are promoted (`pool-r1-256`, `pool-r1-exact`, `pool-exact`, `pool30-exact`). The cost is operations: every atom is computed first, up to 2,856 operations per position.
 
+## Smoke test and calibration (2026-11-26)
+
+A paid smoke test, `chess-forces concepts run --run c0 --usd 0.10 --units 8`: 8 calls, 0.013 USD, 41 candidates, every answer valid; none passed the quick filter, so none was refitted and none accepted. `uv run python scripts/concept_calibration.py --run c0 --units 8 --random 30` (free: the answers come back from the ledger) then refitted every candidate, each against the same base, and did the same for 30 random enumerated comparisons from below the pool's cut:
+
+| Candidates | Count | Saved on the exact tree, median | At least 1 B |
+| --- | ---: | ---: | ---: |
+| the model's (run c0) | 35 | 0.0 B | 49% |
+| random enumerated comparisons | 30 | 30.9 B | 93% |
+
+Three findings. (1) The quick filter does not predict what a concept saves: concepts it rated at a few bits saved up to 58 B on the exact tree, so every candidate has to be refitted (about 4 s each). (2) The acceptance rule of C2 ("saves at least 1 B") accepts almost any concept: the greedy exact tree is far from the shortest, and almost any cheap extra feature shortens it, so the pool of 500 kept comparisons is not saturated. (3) Per candidate, the model's concepts did worse than random enumerated ones; they also cost more to write (several statements against one comparison). On 8 calls this is a small sample, but it points against the 2x criterion of C5.
+
+The paid run with 3 USD is therefore held back: as built it would accept almost everything and measure mostly the noise of greedy trees.
+
+<details><summary>Every candidate of run c0</summary>
+
+| Unit | Concept | Filter, 256 leaves (bits) | Saved at 256 leaves | Saved, exact | Status |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 0 | u0_cut | 33 | -30.3 | 17.9 | accepted |
+| 0 | u0_race | 37 | -35.1 | 11.8 | accepted |
+| 0 | u0_lead | 39 | -60.2 | -23.8 | small |
+| 0 | u0_wins | 35 | -57.2 | -26.4 | small |
+| 1 | u1_bpre | 44 | -5.6 | -19.0 | small |
+| 1 | u1_edge_r2 | 6 | -22.3 | 42.6 | accepted |
+| 1 | u1_wins | 44 | -76.5 | -66.9 | small |
+| 2 | u2_opp | 29 | -40.8 | -12.0 | small |
+| 2 | u2_opp_bm | 24 | -34.9 | 6.9 | accepted |
+| 2 | u2_opp_wm | 11 | -52.2 | -24.9 | small |
+| 2 | u2_fdef | 6 | -18.0 | 41.7 | accepted |
+| 2 | u2_fatt | 2 | -5.2 | 38.3 | accepted |
+| 2 | u2_wins | 8 | -19.6 | 27.9 | accepted |
+| 3 | u3_cut | 7 | -135.1 | -282.4 | small |
+| 3 | u3_reachable | 20 | -21.3 | 28.3 | accepted |
+| 3 | u3_race | 31 | -5.3 | 42.1 | accepted |
+| 3 | u3_wins | 26 | -21.1 | -23.4 | small |
+| 4 | u4_race | 14 | -20.0 | 22.6 | accepted |
+| 4 | u4_hit | 5 | -11.2 | 23.0 | accepted |
+| 4 | u4_guarded_hit | 5 | -36.4 | -14.9 | small |
+| 4 | u4_wins | 15 | -59.2 | -71.5 | small |
+| 5 | u5_rook | 22 | -8.9 | 5.9 | accepted |
+| 5 | u5_corner_race | 4 | -116.1 | -122.0 | small |
+| 5 | u5_corner_hold | 0 | 0.0 | 0.0 | duplicate |
+| 5 | u5_wins | 14 | -74.1 | -66.9 | small |
+| 6 | u6_sup7 | 1 | -35.8 | 28.2 | accepted |
+| 6 | u6_blk7 | -0 | -20.6 | 6.7 | accepted |
+| 6 | u6_race | 25 | -54.2 | -8.7 | small |
+| 6 | u6_low2 | 0 | -20.3 | 3.3 | accepted |
+| 6 | u6_edge | 15 | -30.6 | -5.9 | small |
+| 6 | u6_wins | 25 | -80.0 | -39.1 | small |
+| 7 | u7_cut | 13 | 1.5 | 58.5 | accepted |
+| 7 | u7_force | 30 | -66.7 | -2.5 | small |
+| 7 | u7_wedge | 0 | 0.0 | 0.0 | duplicate |
+| 7 | u7_wins | 31 | -14.1 | 20.2 | accepted |
+
+</details>
+
 ## What is measured
 
 Per call: tokens, cost, valid candidates, new candidates, accepted candidates, bytes saved at 256 leaves and for the exact program. Per run: bytes saved per dollar, and the same for the enumeration (free, so per concept). Operations of the written programs are reported too: today's tree programs compute every quantity first and need about 1,200 operations on average, 2,350 at most.

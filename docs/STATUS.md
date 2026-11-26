@@ -16,8 +16,9 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 - The review showed that r1's 3.2% errors were a limit of the search, not of the language. In the second pass, concepts found by enumerating comparisons of force quantities nearly matched the model's concepts (3,014 against 2,939 B at 256 leaves) and lost for an exact program (5,270 against 4,258 B); together they are best. The enumerated concepts that matter are familiar chess (rule of the square, king races to the squares in front of the pawn).
 - References: the best net is still smaller below 2,400 B (2,351 B real, 530 errors, 235 operations), and the smallest exact net (4,018 B, 611 operations) is a little smaller and much faster than the smallest exact program. lzma of the bitbase is 3,341 B at an estimated 282,600 operations. Every exact method is kept and shown in the report in its own colour.
 - Language 0.3 (2026-11-26): programs are limited by grammar code (128 KiB), not by characters; every score is unchanged.
+- Concept loop (note 03, built 2026-11-26): the stronger enumeration with r1's concepts gives the best KPK programs so far, `pool-r1-256` (1,857 B real, 158 errors) and the exact `pool-r1-exact` (2,201 B real, −72% against Syzygy), at up to 2,856 operations. The paid concept run is held back after a smoke test (see the note).
 - What the search found is known chess; so did the enumeration. Nothing new has been shown.
-- Phase 1 is done and a single-user search loop exists (one run, r1). 204 tests pass.
+- Phase 1 is done and a single-user search loop exists (one run, r1). 217 tests pass.
 - Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git
@@ -36,7 +37,7 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ```text
 uv run chess-forces kpk | spec | score FILE | report | trees | promote FILE... | train-nets | evolve ... | budget status
-uv run pytest            # about 3 minutes
+uv run pytest            # about 9 minutes
 uv run chess-forces report        # rebuilds endgames/kpk/report.* (about 15 s)
 uv run chess-forces trees         # retrains the decision trees into endgames/kpk/trees (a few seconds)
 uv run chess-forces train-nets    # retrains the nets (about 25 minutes, all cores)
@@ -56,7 +57,7 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 ## Waiting for the owner
 
 1. Merge the local branches `close-kpk` and `kpk-pass2` into `main`, and push?
-2. [Concept note 03](03-concept-loop.md): concepts by a model, combined by trees, calibrated on KPK; decisions C1–C5. Building it is free, the run needs a budget (proposed 3 USD).
+2. Concept note 03 is built and its baseline measured: the stronger enumeration with r1's concepts gives an exact program of 2,201 B real (`pool-r1-exact`). A paid smoke test (8 calls, 0.013 USD) and a free calibration showed that the model's concepts did no better than random enumerated ones and that the acceptance rule mostly measures noise of greedy trees (see the note). The 3 USD run is held back. Next, free: grow the enumerated pool until extra comparisons stop helping, then test the 35 paid concepts against it; spend only if they then beat enumeration?
 3. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
 4. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
 5. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
@@ -144,7 +145,7 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. If approved: concept note 03, stronger enumeration first, then the calibration run on KPK.
+2. Concept note 03: saturate the enumerated pool (free), re-test the run c0 concepts against it, decide about the paid run.
 3. Concept note 04 for 5 pieces (above). The KPK lesson for it: let free trees combine concepts, spend tokens on concepts only, and enumerate as a baseline.
 4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
 5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
