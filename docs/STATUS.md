@@ -61,8 +61,8 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 | Approach | Cost | What it gave on KPK | Where |
 | --- | --- | --- | --- |
 | Search loop: a model proposes whole programs | tokens | textbook concepts, best 4,426 B (bound) | `search.py`, run r1 |
-| Mechanical trimming, no model | free | r1 program 966 from 4,476 to 4,430 B | `state/scripts/trim.py` (local) |
-| Reviewer models on rejected programs | tokens | one useful variant (4,472 B at 388 operations) | `state/scripts/review.py` (local) |
+| Mechanical trimming, no model | free | r1 program 966 from 4,476 to 4,430 B | `scripts/trim.py`, input from `scripts/rejected.py` |
+| Reviewer models on rejected programs | tokens | one useful variant (4,472 B at 388 operations) | `scripts/review.py` (OpenRouter, own ledger) |
 | Trees over force concepts, written as DSL | free | exact program 7,110 B; 3,577 B real at 256 leaves | `scripts/force_trees.py` |
 | Decision trees over simple features | free | reference; exact at 10,672 B | `chess-forces trees`, `scripts/force_trees.py` |
 | Table nets | free (CPU) | reference; 29 exact, smallest 4,018 B real | `nets.py`, `chess-forces train-nets` |

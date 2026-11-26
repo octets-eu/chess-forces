@@ -193,7 +193,7 @@ def _confirm_tty(amount: str, what: str) -> None:
 
 
 def _budget(args) -> int:
-    g = budget.Guard()
+    g = budget.Guard(args.ledger)
     try:
         if args.cmd == "init":
             g.init(args.total, args.daily)
@@ -273,6 +273,11 @@ def main(argv=None) -> int:
     ev.add_argument("--show-prompt", action="store_true", help="print a prompt and stop, no call")
     ev.set_defaults(fn=_evolve)
     bud = sub.add_parser("budget", help="API spend limits")
+    bud.add_argument(
+        "--ledger",
+        default=None,
+        help="another ledger file, e.g. state/openrouter.sqlite (default: budget.sqlite)",
+    )
     bsub = bud.add_subparsers(dest="cmd", required=True)
     init = bsub.add_parser("init", help="set the limits once")
     init.add_argument("--total", required=True, help="USD available in the Console account")
