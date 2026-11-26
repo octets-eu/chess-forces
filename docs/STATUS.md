@@ -13,9 +13,9 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 ## Where things stand
 
 - **KPK is closed** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). Five force programs are smaller than Syzygy's `KPvK.rtbw` (7,824 B) in real bytes: the best, `r1-unit-831`, is 4,886 B (−38%) at 1,259 operations at most, 403 on average; Syzygy needs an estimated 2,122 at most, 983 on average. Real bytes are an actual encoding (`codec.py`), about 10% above the score's bound.
-- References are smaller still: a table net 2,351 B real at 235 operations, lzma of the bitbase 3,341 B at an estimated 282,600. At KPK, beating Syzygy says more about Syzygy's general format than about the concepts; the real test is 5 pieces and more.
+- References are smaller still: a table net 2,351 B real at 235 operations, lzma of the bitbase 3,341 B at an estimated 282,600. 29 nets are exact (no exceptions); the smallest is 4,018 B real at 611 operations. Every exact method is kept and shown in the report in its own colour. No force program is exact. At KPK, beating Syzygy says more about Syzygy's general format than about the concepts; the real test is 5 pieces and more.
 - What the search found is known chess (square, key squares, opposition, rook-pawn corner, blockade, captures), not new concepts. Programs are small (about 150 B); almost all their cost is exceptions, most of them with a central pawn on ranks 2 to 4.
-- Phase 1 is done and a single-user search loop exists (one run, r1). 179 tests pass.
+- Phase 1 is done and a single-user search loop exists (one run, r1). 180 tests pass.
 - Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git

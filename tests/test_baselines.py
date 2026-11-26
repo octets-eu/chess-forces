@@ -22,6 +22,15 @@ def test_saved_trees_are_what_training_gives_now():
     assert points[-1].errors < points[0].errors and points[-1].bytes_total < points[0].bytes_total
 
 
+def test_every_exact_net_is_shown():
+    """Nets without errors are kept and plotted even when they are not on the frontier."""
+    pts = baselines.net_points(score.kpk_task())
+    exact = [p for p in pts if p.errors == 0]
+    assert len(exact) >= 29
+    assert min(p.bytes_total for p in exact) < 3_800
+    assert len({p.name for p in pts}) == len(pts)  # names stay unique
+
+
 def test_human_rules_are_pinned():
     """The hand-written rule set is frozen; if this moves, the program or the language changed."""
     text = (report.PROGRAMS / "human.dsl").read_text()

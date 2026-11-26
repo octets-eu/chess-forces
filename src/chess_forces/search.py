@@ -265,6 +265,14 @@ class Archive:
                 out[t] = Scored(*r[:-1], json.loads(r[-1]))
         return out
 
+    def exact(self) -> list[Scored]:
+        """Every program without errors, smallest first; each one is kept, not only the best."""
+        rows = self._rows(
+            "select id, text, total, prog_bytes, exc_bytes, errors, false_wins, missed, ops_max, tier, feedback "
+            "from programs where errors = 0 group by hash order by total, id"
+        )
+        return [Scored(*r[:-1], json.loads(r[-1])) for r in rows]
+
 
 def hash_of(text: str) -> str:
     import hashlib

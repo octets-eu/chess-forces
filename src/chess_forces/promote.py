@@ -1,7 +1,7 @@
 """Move a program into its endgame's programs/ folder when it beats the best one of its tier.
 
 A program is promoted if its total is smaller than that of every force program already in the folder
-whose worst case fits the same tier. It is copied with a comment on where it came from (comments are
+whose worst case fits the same tier, or if it has no errors at all: every exact program is kept. It is copied with a comment on where it came from (comments are
 free: size is computed on the syntax tree), scored again, and older programs stay. The report then
 plots it, because it reads every file in programs/.
 """
@@ -46,9 +46,11 @@ def promote(
     task = endgame.task()
     day = (today or datetime.date.today()).isoformat()
     known: dict[Path, tuple[float, int]] = {}
+    hashes: set[str] = set()
     for p in sorted(endgame.programs.glob("*.dsl")):
         r = score.score(p.read_text(), task)
         known[p] = (r.bytes_total, r.ops_max)
+        hashes.add(r.program_hash)
     out = []
     for i, path in enumerate(map(Path, paths)):
         source = _shown(path)
@@ -61,7 +63,11 @@ def promote(
             continue
         tier = r.tier
         best = min((b for b, ops in known.values() if ops <= tier), default=math.inf)
-        if r.bytes_total >= best:
+        if r.program_hash in hashes:
+            out.append(Outcome(source, None, "the same program is there already"))
+            continue
+        exact = r.errors == 0
+        if r.bytes_total >= best and not exact:
             out.append(
                 Outcome(
                     source,
@@ -86,8 +92,14 @@ def promote(
             dest.unlink()
             raise AssertionError(f"{dest.name} scores differently after copying")
         known[dest] = (r.bytes_total, r.ops_max)
+        hashes.add(r.program_hash)
         was = "" if best == math.inf else f", best so far {best:,.1f} B"
-        out.append(Outcome(source, dest, f"{r.bytes_total:,.1f} B in tier {tier:,}{was}"))
+        why = (
+            "exact, kept"
+            if exact and r.bytes_total >= best
+            else f"{r.bytes_total:,.1f} B in tier {tier:,}{was}"
+        )
+        out.append(Outcome(source, dest, why))
     return out
 
 

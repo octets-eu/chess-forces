@@ -34,7 +34,9 @@ Yes. Five force programs are smaller than the Syzygy file, counted in real bytes
 | decision tree, 128 leaves | 6,205 | 155 |
 | bitbase, one bit per slot | 24,576 | 20 |
 
-A small net needs half the bytes of the best program at a fifth of its worst case, and a general compressor is smaller too if compute is ignored. KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
+A small net needs half the bytes of the best program at a fifth of its worst case, and a general compressor is smaller too if compute is ignored.
+
+Nets can also be exact. 29 nets from the training sweep answer every position with no exception list; all are kept in `nets/` (retrained from the sweep record, checksums identical) and listed in the report. The smallest, relative3 with 48 hidden units, is 4,018 B real (3,795 B score) at 611 operations; the fastest, relative3 with 24 hidden units, is 4,783 B at 323. Both are smaller than Syzygy. No force program is exact. KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
 ## What the programs know
 
 The programs are readable and use textbook ideas: the rule of the square, key squares in front of the pawn, the opposition, the rook-pawn corner, a loose pawn the weak king reaches first, a blockade in front of the pawn, the weak king taking the pawn. `r1-unit-831` is 20 lines; its program part is 156 B, the other 4,270 B (bound) are its 5,363 exceptions. Run r1 combined these ideas compactly; it found no new concept.
@@ -56,6 +58,7 @@ Where the best program is still wrong (`uv run chess-forces score endgames/kpk/p
 
 ## Open in KPK
 
+- No force program is exact. An exact description of about 4 KB exists (the nets above); whether the force language has one of similar size is not known. A near-exact program would also do: with 100 errors the exception list costs only 153 B (bound), against 4,270 B at 5,363 errors. Run r1 stayed with programs of about 150 B; the region between was not searched.
 - The frontier of force programs is not exhausted: the best net is 2,351 B real at 235 operations, half the best program.
 - The lookup of a listed exception is charged 32 operations, an assumption; the Elias–Fano lookup was not counted.
 - Syzygy's operations are an estimate with hand-priced steps, not a measurement of an engine.

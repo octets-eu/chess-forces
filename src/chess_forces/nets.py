@@ -296,6 +296,10 @@ def evaluate(net: Net, task: score.Task, l1: float = 0.0) -> Result:
     )
 
 
+def file_name(r: Result) -> str:
+    return f"{r.family}-h{r.hidden}-b{r.bits}-s{r.seed}-l{r.l1:g}.npz"
+
+
 def save(net: Net, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
@@ -365,7 +369,8 @@ def frontier(results: list[Result]) -> list[Result]:
 def sweep(
     jobs: list[tuple] | None = None, processes: int | None = None, progress=print
 ) -> list[Result]:
-    """Train the grid in parallel, save the nets on the bytes/operations frontier and the best per tier."""
+    """Train the grid in parallel; save the nets on the bytes/operations frontier, the best per tier and
+    every net without errors."""
     for v in ("OMP_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "OPENBLAS_NUM_THREADS"):
         os.environ.setdefault(v, "1")
     jobs = jobs or grid()
@@ -393,10 +398,11 @@ def sweep(
         fits = [r for r in results if r.ops <= tier]
         if fits:
             keep.add(min(fits, key=lambda r: r.total).digest)
+    keep |= {r.digest for r in results if r.errors == 0}
     NETS_DIR.mkdir(parents=True, exist_ok=True)
     for r, net in out:
         if r.digest in keep:
-            save(net, NETS_DIR / f"{r.family}-h{r.hidden}-b{r.bits}-s{r.seed}.npz")
+            save(net, NETS_DIR / file_name(r))
     (NETS_DIR / "sweep.json").write_text(
         json.dumps(
             [{**asdict(r), "total": r.total} for r in sorted(results, key=lambda r: r.total)],

@@ -157,6 +157,9 @@ def _evolve(args) -> int:
             for tier, best in archive.best_per_tier().items():
                 saved.append(out / f"best-{tier}.dsl")
                 saved[-1].write_text(best.text)
+            for i, s in enumerate(archive.exact()):
+                saved.append(out / f"exact-{i}.dsl")
+                saved[-1].write_text(s.text)
                 bar = bars.by_tier.get(tier)
                 bar_text = f"; bar {bar[0]:,.0f} B ({bar[1]})" if bar else ""
                 print(

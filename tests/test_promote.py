@@ -36,7 +36,7 @@ def test_better_programs_are_promoted_worse_ones_kept_out(tmp_path):
         today=day,
     )
     assert out[0].promoted == eg.programs / "t-cand-evolved-1024.dsl"
-    assert out[1].promoted is None and "not smaller" in out[1].reason  # the copy now sets the bar
+    assert out[1].promoted is None and "already" in out[1].reason  # the same program
     assert out[2].promoted is None and "tier" in out[2].reason
     assert out[3].promoted is None and out[3].reason.startswith("rejected")
     text = out[0].promoted.read_text()

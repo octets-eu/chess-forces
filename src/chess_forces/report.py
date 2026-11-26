@@ -116,6 +116,21 @@ def _markdown(report: Report) -> str:
                 f"| {p.name} | {p.real_bytes:,.0f} | {p.bytes_total:,.0f} | {p.ops_max:,.0f} | "
                 f"{d:+,.0f} B ({d / syz.bytes_total:+.0%}) |"
             )
+    exact = sorted((p for p in report.points if p.errors == 0), key=lambda p: p.bytes_total)
+    lines += [
+        "",
+        "## Exact methods (no exceptions)",
+        "",
+        "Every method that answers all positions without a list of exceptions is kept and shown, smallest first.",
+        "",
+        "| Method | Kind | Bytes (score) | Real bytes | Operations, mean / max |",
+        "| --- | --- | ---: | ---: | ---: |",
+    ]
+    for p in exact:
+        ops = "–" if p.ops_max is None else f"{p.ops_mean:,.0f} / {p.ops_max:,.0f}"
+        ops += " (est)" if p.estimated_ops else ""
+        real = "–" if p.real_bytes is None else f"{p.real_bytes:,.0f}"
+        lines.append(f"| {p.name} | {p.kind} | {p.bytes_total:,.0f} | {real} | {ops} |")
     lines += [
         "",
         "## All methods",
@@ -209,37 +224,48 @@ def _plot(report: Report, path: Path) -> None:
     )
     fig, ax = plt.subplots(figsize=(10.5, 6.6), dpi=150, facecolor=SURFACE)
     ax.set_facecolor(SURFACE)
+    # Three hues only (a scatter carries three safely); exactness is a colour, the kind is the marker.
     style = {
-        "table": (AQUA, "s", "Table references"),
-        "learned": (ORANGE, "^", "Learned references (tree, net)"),
-        "force": (BLUE, "o", "Force-language programs"),
+        "table": ("s", "Tables (exact)"),
+        "learned": ("^", "Learned references (tree, net)"),
+        "force": ("o", "Force-language programs"),
     }
-    for kind, (color, marker, label) in style.items():
+    exact_label = {
+        "learned": "Exact nets (no exceptions)",
+        "force": "Exact programs (no exceptions)",
+    }
+    for kind, (marker, label) in style.items():
         pts = [p for p in report.points if p.kind == kind and p.ops_max is not None]
-        solid = [p for p in pts if not p.estimated_ops]
-        hollow = [p for p in pts if p.estimated_ops]
-        ax.scatter(
-            [p.ops_max for p in solid],
-            [p.bytes_total for p in solid],
-            s=70,
-            marker=marker,
-            color=color,
-            edgecolors=SURFACE,
-            linewidths=1.2,
-            zorder=3,
-            label=label,
-        )
-        if hollow:
+        for exact in (False, True):
+            group = [p for p in pts if (p.errors == 0) == exact]
+            if not group:
+                continue
+            color = AQUA if exact else {"learned": ORANGE, "force": BLUE}.get(kind, AQUA)
+            name = label if kind == "table" or not exact else exact_label[kind]
+            solid = [p for p in group if not p.estimated_ops]
+            hollow = [p for p in group if p.estimated_ops]
             ax.scatter(
-                [p.ops_max for p in hollow],
-                [p.bytes_total for p in hollow],
+                [p.ops_max for p in solid],
+                [p.bytes_total for p in solid],
                 s=70,
                 marker=marker,
-                facecolors=SURFACE,
-                edgecolors=color,
-                linewidths=1.8,
+                color=color,
+                edgecolors=SURFACE,
+                linewidths=1.2,
                 zorder=3,
+                label=name,
             )
+            if hollow:
+                ax.scatter(
+                    [p.ops_max for p in hollow],
+                    [p.bytes_total for p in hollow],
+                    s=70,
+                    marker=marker,
+                    facecolors=SURFACE,
+                    edgecolors=color,
+                    linewidths=1.8,
+                    zorder=3,
+                )
     front = report.frontier
     ax.plot(
         [p.ops_max for p in front],
@@ -284,13 +310,15 @@ def _plot(report: Report, path: Path) -> None:
         "always_win": (9, 4, "left"),
         "square": (9, 4, "left"),
         "decision tree, 64 leaves": (9, -4, "left"),
-        "human": (9, 6, "left"),
+        "human": ("at", 330, 6700),
         "evolved-256": (9, -14, "left"),
-        "evolved-1024": (-9, -18, "right"),
-        "r1-trimmed-966": (9, -18, "left"),
-        "r1-unit-831": (9, 8, "left"),
+        "evolved-1024": ("at", 1700, 5000),
+        "r1-trimmed-966": ("at", 1700, 4550),
+        "r1-unit-831": ("at", 1700, 4150),
         "lzma of the bitbase": (9, 6, "left"),
         "Syzygy KPvK.rtbw": (9, -16, "left"),
+        "net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06)": ("at", 1700, 3650),
+        "net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0)": ("at", 330, 3250),
         "net pairs3 additive, 5 bit": None,  # named in the report's table; no room on the plot
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
     }
@@ -307,18 +335,37 @@ def _plot(report: Report, path: Path) -> None:
     renderer = fig.canvas.get_renderer()
     placed = []
     spots = [(9, 4, "left"), (9, -14, "left"), (9, 16, "left"), (9, -26, "left"), (-9, 4, "right")]
+    exact_front = pareto([p for p in report.points if p.errors == 0 and p.kind != "table"])
     chosen = [
         p
         for p in report.points
         if p.ops_max is not None
-        and (p.name in labels or p.name in tier_best or p.kind == "force")
+        and (p.name in labels or p.name in tier_best or p.kind == "force" or p in exact_front)
         and labels.get(p.name, ()) is not None
     ]
     chosen.sort(key=lambda p: (p.name not in labels, p.ops_max))
     for p in chosen:
         text = p.name + (" (operations estimated)" if p.estimated_ops else "")
+        if p in exact_front:  # short: the report's table has the full name and file
+            text = "exact net, " + p.name.split(" (")[0].split(" ", 2)[2]
         tries = ([labels[p.name]] if p.name in labels else []) + spots
-        for dx, dy, ha in tries:
+        for spot in tries:
+            line = {"arrowstyle": "-", "color": INK_2, "lw": 0.6, "shrinkA": 1, "shrinkB": 4}
+            if spot[0] == "at":  # a fixed place in data coordinates, with a leader line
+                ann = ax.annotate(
+                    text,
+                    (p.ops_max, p.bytes_total),
+                    xytext=(spot[1], spot[2]),
+                    textcoords="data",
+                    fontsize=8.5,
+                    color=INK,
+                    ha="left",
+                    va="center",
+                    arrowprops=line,
+                )
+                placed.append(ann.get_window_extent(renderer))
+                break
+            dx, dy, ha = spot
             far = abs(dy) > 8  # a leader line shows which point a moved label belongs to
             ann = ax.annotate(
                 text,
@@ -328,15 +375,7 @@ def _plot(report: Report, path: Path) -> None:
                 fontsize=8.5,
                 color=INK,
                 ha=ha,
-                arrowprops={
-                    "arrowstyle": "-",
-                    "color": INK_2,
-                    "lw": 0.6,
-                    "shrinkA": 1,
-                    "shrinkB": 4,
-                }
-                if far
-                else None,
+                arrowprops=line if far else None,
             )
             box = ann.get_window_extent(renderer)
             if not any(box.overlaps(q) for q in placed):

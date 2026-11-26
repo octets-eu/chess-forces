@@ -292,23 +292,34 @@ def real_net_bytes(net: nets.Net, task: score.Task) -> int:
 
 
 def net_points(task: score.Task) -> list[Point]:
-    """Saved nets, evaluated exactly on all positions: those on their own frontier and the best per tier."""
-    loaded = [nets.load(p) for p in sorted(nets.NETS_DIR.glob("*.npz"))]
-    results = [nets.evaluate(net, task) for net in loaded]
-    by_digest = {net.digest(): net for net in loaded}
+    """Saved nets, evaluated exactly on all positions: those on their own frontier, the best per tier and
+    every net without errors."""
+    by_digest, stems = {}, {}
+    for p in sorted(nets.NETS_DIR.glob("*.npz")):
+        net = nets.load(p)
+        if net.digest() not in by_digest:
+            by_digest[net.digest()], stems[net.digest()] = net, p.stem
+    results = [nets.evaluate(net, task) for net in by_digest.values()]
     keep = {r.digest for r in nets.frontier(results)}
+    keep |= {r.digest for r in results if r.errors == 0}  # every exact net is shown
     for tier in TIERS:
         fits = [r for r in results if r.ops <= tier]
         if fits:
             keep.add(min(fits, key=lambda r: r.total).digest)
+    kept = [r for r in sorted(results, key=lambda r: r.ops) if r.digest in keep]
+
+    def plain(r):
+        return f"net {r.family} {f'{r.hidden} hidden' if r.hidden else 'additive'}, {r.bits} bit"
+
+    seen = [plain(r) for r in kept]
     out = []
-    for r in sorted(results, key=lambda r: r.ops):
-        if r.digest not in keep:
-            continue
-        shape = f"{r.hidden} hidden" if r.hidden else "additive"
+    for r in kept:
+        name = plain(r)
+        if seen.count(name) > 1:  # same shape, other seed or sparsity: the file tells them apart
+            name += f" ({stems[r.digest]})"
         out.append(
             Point(
-                f"net {r.family} {shape}, {r.bits} bit",
+                name,
                 "learned",
                 r.model_bytes,
                 r.exception_bytes,
@@ -318,7 +329,7 @@ def net_points(task: score.Task) -> list[Point]:
                 False,
                 False,
                 "table lookups plus a small output layer, integer weights, quantisation-aware training",
-                f"digest {r.digest}",
+                f"digest {r.digest}, nets/{stems[r.digest]}.npz",
                 r.state_bytes,
                 real_bytes=real_net_bytes(by_digest[r.digest], task),
             )

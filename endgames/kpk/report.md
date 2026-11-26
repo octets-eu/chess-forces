@@ -16,6 +16,45 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 | square | 16,801 | 14,151 | 70 | +8,977 B (+115%) |
 | always_win | 20,718 | 18,914 | 32 | +12,894 B (+165%) |
 
+## Exact methods (no exceptions)
+
+Every method that answers all positions without a list of exceptions is kept and shown, smallest first.
+
+| Method | Kind | Bytes (score) | Real bytes | Operations, mean / max |
+| --- | --- | ---: | ---: | ---: |
+| lzma of the bitbase | table | 3,341 | 3,341 | 282,600 / 282,600 (est) |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06) | learned | 3,795 | 4,018 | 611 / 611 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s1-l3e-06) | learned | 4,202 | 4,404 | 803 / 803 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l3e-06) | learned | 4,412 | 4,625 | 803 / 803 |
+| net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0) | learned | 4,583 | 4,783 | 323 / 323 |
+| net relative3 24 hidden, 4 bit (relative3-h24-b4-s1-l0) | learned | 4,587 | 4,825 | 323 / 323 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s0-l3e-06) | learned | 4,857 | 5,027 | 1,187 / 1,187 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s1-l3e-06) | learned | 5,129 | 5,355 | 1,187 / 1,187 |
+| net relative 48 hidden, 4 bit (relative-h48-b4-s1-l0) | learned | 5,345 | 5,283 | 509 / 509 |
+| net relative 48 hidden, 4 bit (relative-h48-b4-s0-l0) | learned | 5,371 | 5,309 | 509 / 509 |
+| net relative3 32 hidden, 4 bit (relative3-h32-b4-s1-l0) | learned | 6,081 | 6,283 | 419 / 419 |
+| net relative3 32 hidden, 4 bit (relative3-h32-b4-s0-l0) | learned | 6,090 | 6,417 | 419 / 419 |
+| net relative 64 hidden, 4 bit (relative-h64-b4-s0-l0) | learned | 7,121 | 7,267 | 669 / 669 |
+| net relative3 48 hidden, 3 bit (relative3-h48-b3-s0-l0) | learned | 7,123 | 7,978 | 611 / 611 |
+| net relative 64 hidden, 4 bit (relative-h64-b4-s1-l0) | learned | 7,130 | 7,165 | 669 / 669 |
+| net relative3 48 hidden, 3 bit (relative3-h48-b3-s1-l0) | learned | 7,137 | 8,077 | 611 / 611 |
+| Syzygy KPvK.rtbw | table | 7,824 | 7,824 | 983 / 2,122 (est) |
+| net relative 96 hidden, 3 bit (relative-h96-b3-s1-l0) | learned | 8,399 | 8,998 | 989 / 989 |
+| net relative 96 hidden, 3 bit (relative-h96-b3-s0-l0) | learned | 8,401 | 9,080 | 989 / 989 |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s0-l0) | learned | 9,079 | 9,734 | 611 / 611 |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l0) | learned | 9,148 | 9,824 | 611 / 611 |
+| net relative3 64 hidden, 3 bit (relative3-h64-b3-s0-l0) | learned | 9,488 | 10,767 | 803 / 803 |
+| net relative3 64 hidden, 3 bit (relative3-h64-b3-s1-l0) | learned | 9,505 | 10,720 | 803 / 803 |
+| net relative 96 hidden, 4 bit (relative-h96-b4-s0-l0) | learned | 10,668 | 11,139 | 989 / 989 |
+| net relative 96 hidden, 4 bit (relative-h96-b4-s1-l0) | learned | 10,705 | 11,167 | 989 / 989 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l0) | learned | 12,188 | 12,720 | 803 / 803 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s1-l0) | learned | 12,198 | 12,717 | 803 / 803 |
+| net relative3 96 hidden, 3 bit (relative3-h96-b3-s1-l0) | learned | 14,214 | 16,040 | 1,187 / 1,187 |
+| net relative3 96 hidden, 3 bit (relative3-h96-b3-s0-l0) | learned | 14,224 | 16,147 | 1,187 / 1,187 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s1-l0) | learned | 18,214 | 19,280 | 1,187 / 1,187 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s0-l0) | learned | 18,214 | 19,420 | 1,187 / 1,187 |
+| bitbase (all slots) | table | 24,576 | 24,576 | 20 / 20 |
+
 ## All methods
 
 Total bytes is the bound used for ranking and the plot; real bytes is an actual encoding.
@@ -35,20 +74,49 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 | net relative3 8 hidden, 4 bit ★ | 2,628 | 2,783 | 1,303.8 | 1,324.0 | 1,246 | 163 |
 | net relative3 6 hidden, 4 bit ★ | 2,994 | 3,224 | 1,008.4 | 1,985.4 | 2,041 | 139 |
 | net relative3 5 hidden, 4 bit ★ | 3,458 | 3,771 | 854.0 | 2,604.0 | 2,857 | 127 |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06) | 3,795 | 4,018 | 3,795.1 | 0.0 | 0 | 611 |
 | net relative3 4 hidden, 4 bit ★ | 4,144 | 4,471 | 696.3 | 3,447.8 | 4,072 | 115 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s1-l3e-06) | 4,202 | 4,404 | 4,201.6 | 0.0 | 0 | 803 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l3e-06) | 4,412 | 4,625 | 4,412.1 | 0.0 | 0 | 803 |
+| net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0) | 4,583 | 4,783 | 4,583.4 | 0.0 | 0 | 323 |
+| net relative3 24 hidden, 4 bit (relative3-h24-b4-s1-l0) | 4,587 | 4,825 | 4,586.9 | 0.0 | 0 | 323 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s0-l3e-06) | 4,857 | 5,027 | 4,857.4 | 0.0 | 0 | 1,187 |
 | net relative3 3 hidden, 4 bit ★ | 4,880 | 5,410 | 584.2 | 4,295.5 | 5,404 | 103 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s1-l3e-06) | 5,129 | 5,355 | 5,128.6 | 0.0 | 0 | 1,187 |
+| net relative 48 hidden, 4 bit (relative-h48-b4-s1-l0) | 5,345 | 5,283 | 5,344.9 | 0.0 | 0 | 509 |
+| net relative 48 hidden, 4 bit (relative-h48-b4-s0-l0) | 5,371 | 5,309 | 5,370.6 | 0.0 | 0 | 509 |
 | net relative 4 hidden, 4 bit ★ | 5,612 | 6,123 | 433.3 | 5,178.9 | 6,908 | 101 |
 | net pairs3 additive, 5 bit ★ | 5,681 | 5,579 | 2,878.2 | 2,802.8 | 3,133 | 58 |
 | decision tree, 128 leaves | 5,682 | 6,205 | 494.4 | 5,187.4 | 6,923 | 155 |
+| net relative3 32 hidden, 4 bit (relative3-h32-b4-s1-l0) | 6,081 | 6,283 | 6,081.0 | 0.0 | 0 | 419 |
+| net relative3 32 hidden, 4 bit (relative3-h32-b4-s0-l0) | 6,090 | 6,417 | 6,089.6 | 0.0 | 0 | 419 |
 | decision tree, 96 leaves | 6,258 | 6,878 | 378.1 | 5,880.3 | 8,186 | 153 |
 | net pairs additive, 5 bit ★ | 6,619 | 6,964 | 1,190.9 | 5,427.8 | 7,353 | 53 |
+| net relative 64 hidden, 4 bit (relative-h64-b4-s0-l0) | 7,121 | 7,267 | 7,121.3 | 0.0 | 0 | 669 |
+| net relative3 48 hidden, 3 bit (relative3-h48-b3-s0-l0) | 7,123 | 7,978 | 7,123.5 | 0.0 | 0 | 611 |
+| net relative 64 hidden, 4 bit (relative-h64-b4-s1-l0) | 7,130 | 7,165 | 7,129.6 | 0.0 | 0 | 669 |
+| net relative3 48 hidden, 3 bit (relative3-h48-b3-s1-l0) | 7,137 | 8,077 | 7,137.0 | 0.0 | 0 | 611 |
 | decision tree, 64 leaves | 7,313 | 8,258 | 259.0 | 7,053.6 | 10,493 | 136 |
+| net relative 96 hidden, 3 bit (relative-h96-b3-s1-l0) | 8,399 | 8,998 | 8,399.2 | 0.0 | 0 | 989 |
+| net relative 96 hidden, 3 bit (relative-h96-b3-s0-l0) | 8,401 | 9,080 | 8,401.1 | 0.0 | 0 | 989 |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s0-l0) | 9,079 | 9,734 | 9,078.6 | 0.0 | 0 | 611 |
 | decision tree, 32 leaves | 9,083 | 10,242 | 140.9 | 8,942.3 | 14,677 | 132 |
+| net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l0) | 9,148 | 9,824 | 9,148.2 | 0.0 | 0 | 611 |
+| net relative3 64 hidden, 3 bit (relative3-h64-b3-s0-l0) | 9,488 | 10,767 | 9,487.7 | 0.0 | 0 | 803 |
+| net relative3 64 hidden, 3 bit (relative3-h64-b3-s1-l0) | 9,505 | 10,720 | 9,504.7 | 0.0 | 0 | 803 |
+| net relative 96 hidden, 4 bit (relative-h96-b4-s0-l0) | 10,668 | 11,139 | 10,668.2 | 0.0 | 0 | 989 |
+| net relative 96 hidden, 4 bit (relative-h96-b4-s1-l0) | 10,705 | 11,167 | 10,704.5 | 0.0 | 0 | 989 |
 | decision tree, 16 leaves | 11,032 | 12,767 | 81.2 | 10,950.9 | 19,845 | 126 |
 | net squares additive, 5 bit ★ | 12,002 | 14,121 | 79.7 | 11,922.8 | 22,656 | 52 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l0) | 12,188 | 12,720 | 12,187.5 | 0.0 | 0 | 803 |
+| net relative3 64 hidden, 4 bit (relative3-h64-b4-s1-l0) | 12,198 | 12,717 | 12,197.8 | 0.0 | 0 | 803 |
 | decision tree, 8 leaves | 13,288 | 15,654 | 39.9 | 13,248.3 | 26,881 | 80 |
+| net relative3 96 hidden, 3 bit (relative3-h96-b3-s1-l0) | 14,214 | 16,040 | 14,214.4 | 0.0 | 0 | 1,187 |
+| net relative3 96 hidden, 3 bit (relative3-h96-b3-s0-l0) | 14,224 | 16,147 | 14,223.7 | 0.0 | 0 | 1,187 |
 | decision tree, 2 leaves | 15,028 | 18,068 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 18,081 | 22.6 | 15,017.8 | 33,400 | 75 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s1-l0) | 18,214 | 19,280 | 18,213.9 | 0.0 | 0 | 1,187 |
+| net relative3 96 hidden, 4 bit (relative3-h96-b4-s0-l0) | 18,214 | 19,420 | 18,213.9 | 0.0 | 0 | 1,187 |
 | lzma of the bitbase | 3,341 | 3,341 | 3,341.0 | 0.0 | 0 | 282,600 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824 | 7,824.0 | 0.0 | 0 | 2,122 (est) |
 | bitbase (all slots) ★ | 24,576 | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
