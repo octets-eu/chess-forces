@@ -1,0 +1,22 @@
+# Promoted 2026-11-26 from state/run-r1/trimmed-966-4430B-1019ops.dsl: 4,430.0 B (138.3 B program, 4,291.8 B exceptions), 5,398 errors, at most 1,019 operations, tier 1,024.
+# Run r1 program 966 (4,476 B, 4 operations over its island's limit), shortened by a greedy mechanical trimmer without a model (first try of trimming, docs/STATUS.md); verified against Syzygy.
+def wins() -> Bool:
+    x0 = file(P)
+    x1 = rank(P)
+    x2 = sq(x0, 7)
+    x3 = min(5, (7 - x1))
+    x4 = (k in path(strong, P))
+    x5 = (P in king_f(K))
+    x6 = sq(x0, (x1 + 2))
+    x7 = ((((x3 + 1) - tempo) < dist(k, x2)) and (not x4))
+    x8 = ((0 < x0) and (x5 and ((dist(k, x2) == (x3 + 1)) and (not x4))))
+    x9 = minus(king_f(x6), king_f(P))
+    x10 = compl(king_f(k))
+    x12 = (any(((steps(K, x11, x10) + tempo) < (dist(k, x11) + tempo)) for x11 in x9) if (0 < x0) else (dist(K, sq(1, 6)) < (min(min(dist(k, sq(2, 7)), dist(k, sq(1, 7))), dist(k, sq(0, 7))) + tempo)))
+    x13 = steps(K, x6, x10)
+    x14 = (x4 and ((not x5) and (not (x13 < (dist(k, x6) + tempo)))))
+    x15 = ((tempo < 1) and ((k in king_f(P)) and (not x5)))
+    x16 = (file(K) == file(k))
+    x17 = ((0 < x0) and ((dist(K, k) == 2) and (x16 and ((tempo == 0) and (dist(K, P) < dist(k, P))))))
+    x18 = ((5 <= x1) and ((0 < x0) and ((not x4) and (dist(K, x2) <= dist(k, x2)))))
+    return ((x7 or (x8 or ((x12 and (not ((dist(k, P) + tempo) < dist(K, P)))) or ((x17 and (not x14)) or x18)))) and ((not x14) and (not x15)))

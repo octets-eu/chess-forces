@@ -5,7 +5,7 @@ nets/, Syzygy measurements in syzygy.json; report.md, report.json, report.png an
 the folder's root.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,10 +16,11 @@ ENDGAMES = ROOT / "endgames"
 class Endgame:
     name: str  # folder name and task name in score.TASKS
     syzygy: str  # Syzygy table name, e.g. KPvK
+    root: Path = field(default=ENDGAMES, compare=False)  # tests use a temporary root
 
     @property
     def folder(self) -> Path:
-        return ENDGAMES / self.name
+        return self.root / self.name
 
     @property
     def programs(self) -> Path:

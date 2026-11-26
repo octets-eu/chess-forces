@@ -63,3 +63,13 @@ def test_evolved_programs_are_pinned():
     b = score.score((report.PROGRAMS / "evolved-1024.dsl").read_text(), task)
     assert b.errors == 5_426 and b.ops_max == 959 and b.tier == 1024
     assert b.bytes_total < a.bytes_total < 5_500
+
+
+def test_promoted_r1_programs_are_pinned():
+    """Promoted on 2026-11-26 from local files of run r1; frozen so a language change is noticed."""
+    task = score.kpk_task()
+    t = score.score((report.PROGRAMS / "r1-trimmed-966.dsl").read_text(), task)
+    assert t.errors == 5_398 and t.ops_max == 1_019 and t.tier == 1024
+    u = score.score((report.PROGRAMS / "r1-unit-831.dsl").read_text(), task)
+    assert u.errors == 5_363 and u.ops_max == 1_259 and u.tier == 4096
+    assert u.bytes_total < t.bytes_total < 4_431

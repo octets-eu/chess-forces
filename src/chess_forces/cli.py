@@ -73,6 +73,26 @@ def _trees(_args) -> int:
     return 0
 
 
+def _promote(args) -> int:
+    from . import promote
+    from . import report as rep
+
+    endgame = endgames.ALL[args.endgame]
+    if args.name and len(args.name) != len(args.files):
+        print("give one --name per file, or none", file=sys.stderr)
+        return 1
+    outcomes = promote.promote(
+        [Path(f) for f in args.files], endgame, prefix=args.prefix, names=args.name
+    )
+    for o in outcomes:
+        where = f"promoted to {o.promoted.relative_to(endgames.ROOT)}" if o.promoted else "kept out"
+        print(f"{o.source}: {where} ({o.reason})")
+    if any(o.promoted for o in outcomes) and not args.no_report:
+        for path in rep.write(rep.build()):
+            print(f"wrote {path}")
+    return 0
+
+
 def _report(_args) -> int:
     from . import report as rep
 
@@ -133,8 +153,10 @@ def _evolve(args) -> int:
             print(s.usage_text())
             out = state / f"run-{args.run}"
             out.mkdir(exist_ok=True)
+            saved = []
             for tier, best in archive.best_per_tier().items():
-                (out / f"best-{tier}.dsl").write_text(best.text)
+                saved.append(out / f"best-{tier}.dsl")
+                saved[-1].write_text(best.text)
                 bar = bars.by_tier.get(tier)
                 bar_text = f"; bar {bar[0]:,.0f} B ({bar[1]})" if bar else ""
                 print(
@@ -142,6 +164,15 @@ def _evolve(args) -> int:
                     f"ops {best.ops_max}{bar_text}"
                 )
             print(f"programs saved in {out}; run spend so far {usd(guard.run_spent())} USD")
+            _promote(
+                argparse.Namespace(
+                    files=[str(p) for p in saved],
+                    endgame="kpk",
+                    prefix=f"{args.run}-",
+                    name=None,
+                    no_report=False,
+                )
+            )
     return 0
 
 
@@ -207,6 +238,15 @@ def main(argv=None) -> int:
     sub.add_parser(
         "trees", help="retrain the decision-tree baselines and write endgames/kpk/trees/*.dsl"
     ).set_defaults(fn=_trees)
+    pr = sub.add_parser(
+        "promote", help="copy programs that beat their tier into the endgame's programs/ folder"
+    )
+    pr.add_argument("files", nargs="+")
+    pr.add_argument("--endgame", default="kpk", choices=sorted(endgames.ALL))
+    pr.add_argument("--prefix", default="", help="put before each file name, e.g. r2-")
+    pr.add_argument("--name", action="append", help="file name in programs/ (once per file)")
+    pr.add_argument("--no-report", action="store_true", help="do not rebuild the report")
+    pr.set_defaults(fn=_promote)
     ev = sub.add_parser("evolve", help="run the search loop (spends API money)")
     ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")
     ev.add_argument("--usd", required=True, help="hard limit for this run in USD")

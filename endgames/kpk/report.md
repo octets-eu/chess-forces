@@ -8,6 +8,8 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 
 | Force program | Total bytes | Max ops | Against Syzygy |
 | --- | ---: | ---: | ---: |
+| r1-unit-831 | 4,426 | 1,259 | -3,398 B (-43%) |
+| r1-trimmed-966 | 4,430 | 1,019 | -3,394 B (-43%) |
 | evolved-1024 | 4,459 | 959 | -3,365 B (-43%) |
 | evolved-256 | 5,367 | 232 | -2,457 B (-31%) |
 | human | 5,639 | 273 | -2,185 B (-28%) |
@@ -18,6 +20,8 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 
 | | Total bytes | Model | Exceptions | Errors | Max ops |
 | --- | ---: | ---: | ---: | ---: | ---: |
+| r1-unit-831 | 4,426 | 156.1 | 4,270.4 | 5,363 | 1,259 |
+| r1-trimmed-966 | 4,430 | 138.3 | 4,291.8 | 5,398 | 1,019 |
 | evolved-1024 | 4,459 | 150.3 | 4,308.9 | 5,426 | 959 |
 | evolved-256 | 5,367 | 149.5 | 5,217.8 | 6,977 | 232 |
 | human | 5,639 | 80.4 | 5,558.3 | 7,590 | 273 |
@@ -43,7 +47,7 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 | decision tree, 8 leaves | 13,288 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves | 15,028 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 270,876 (est) |
+| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 273,501 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824.0 | 0.0 | 0 | – |
 | bitbase (all slots) ★ | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 
@@ -55,8 +59,8 @@ Tables and learned models are references, not targets: they show how much of a w
 | ---: | --- | --- | ---: |
 | 64 | 5,681 B (net pairs3 additive, 5 bit) | 18,914 B (always_win) | +13,233 B |
 | 256 | 2,178 B (net relative3 14 hidden, 4 bit) | 5,367 B (evolved-256) | +3,190 B |
-| 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,459 B (evolved-1024) | +2,281 B |
-| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,459 B (evolved-1024) | +2,281 B |
+| 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,430 B (r1-trimmed-966) | +2,252 B |
+| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,426 B (r1-unit-831) | +2,249 B |
 
 ★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 
