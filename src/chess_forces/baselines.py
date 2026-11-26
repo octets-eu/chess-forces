@@ -15,12 +15,12 @@ from pathlib import Path
 
 import numpy as np
 
-from . import kpk, nets, score
+from . import endgames, kpk, nets, score
 from .dsl import TIERS, Position
 
 ROOT = Path(__file__).resolve().parents[2]
 SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", ROOT.parent / "syzygy"))
-TREES_DIR = ROOT / "programs" / "trees"
+TREES_DIR = endgames.KPK.trees
 TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
 
 
@@ -250,7 +250,7 @@ def write_trees(task: score.Task, leaves=TREE_LEAVES, directory: Path = TREES_DI
 
 
 def tree_points(task: score.Task, directory: Path = TREES_DIR) -> list[Point]:
-    """The saved trees (programs/trees/tree-NNN.dsl), scored like any program."""
+    """The saved trees (endgames/kpk/trees/tree-NNN.dsl), scored like any program."""
     out = []
     for path in sorted(directory.glob("tree-*.dsl")):
         n = int(path.stem.split("-")[1])

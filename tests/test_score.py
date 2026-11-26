@@ -10,7 +10,7 @@ from chess_forces import score as s
 from chess_forces.dsl import DslError
 from chess_forces.kpk import N_POSITIONS, N_WINS
 
-PROGRAMS = Path(__file__).resolve().parents[1] / "programs"
+PROGRAMS = Path(__file__).resolve().parents[1] / "endgames" / "kpk" / "programs"
 SQUARE = (PROGRAMS / "square.dsl").read_text()
 ALWAYS = (PROGRAMS / "always_win.dsl").read_text()
 

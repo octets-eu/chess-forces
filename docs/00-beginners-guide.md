@@ -89,11 +89,11 @@ In words: the pawn needs n moves. The white king must not stand in the pawn's wa
 
 ## What came out so far
 
-![Size against work, KPK](../reports/kpk.png)
+![Size against work, KPK](../endgames/kpk/report.png)
 
 Every dot is a method. Lower and further left is better: less total length and less work. Blue circles are programs in our language, orange triangles are learned methods, green squares are tables. The dashed line is the Syzygy file, the target.
 
-As of 2026-11-26 (current numbers: [reports/kpk.md](../reports/kpk.md)):
+As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md)):
 
 - Three programs in our language are smaller than the Syzygy file for KPK (7,824 bytes). The best one, found by the AI, needs 4,459 bytes and at most 959 steps; the hand-written rules need 5,639 bytes.
 - That is a weak test. KPK is so small that a compressed table (3,341 bytes) and a small neural network (2,178 bytes) are smaller still. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
@@ -114,7 +114,7 @@ This costs nothing:
 
 ```text
 uv sync
-uv run chess-forces score programs/square.dsl
+uv run chess-forces score endgames/kpk/programs/square.dsl
 uv run chess-forces report
 ```
 
@@ -179,4 +179,4 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 
 ## How to read the other documents
 
-[STATUS.md](STATUS.md) says what is done and what is next. [01-dsl-concept.md](01-dsl-concept.md) explains the language and the score. [02-agent-loop.md](02-agent-loop.md) explains how the AI searches. [reports/kpk.md](../reports/kpk.md) has all results as a table.
+[STATUS.md](STATUS.md) says what is done and what is next. [01-dsl-concept.md](01-dsl-concept.md) explains the language and the score. [02-agent-loop.md](02-agent-loop.md) explains how the AI searches. [endgames/kpk/report.md](../endgames/kpk/report.md) has all results as a table.

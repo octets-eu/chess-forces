@@ -4,12 +4,11 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import baselines, dsl, score
+from . import baselines, dsl, endgames, score
 from .baselines import Point
 
-ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "reports"
-PROGRAMS = ROOT / "programs"
+ENDGAME = endgames.KPK
+PROGRAMS = ENDGAME.programs
 PROGRAM_NAMES = {
     "always_win": "always win",
     "square": "rule of the square",
@@ -66,9 +65,9 @@ def build() -> Report:
     )
 
 
-def write(report: Report, out: Path = OUT) -> list[Path]:
-    out.mkdir(exist_ok=True)
-    paths = [out / "kpk.json", out / "kpk.md", out / "kpk.png"]
+def write(report: Report, endgame: endgames.Endgame = ENDGAME) -> list[Path]:
+    endgame.folder.mkdir(parents=True, exist_ok=True)
+    paths = [endgame.report("json"), endgame.report("md"), endgame.report("png")]
     paths[0].write_text(
         json.dumps({"dsl": report.dsl, "table": report.table, "points": report.rows()}, indent=1)
     )
@@ -167,17 +166,18 @@ def _markdown(report: Report) -> str:
             "from decompression time (rough, and different on every run), because a single position needs "
             "the whole file unpacked. "
             "Learned baselines are trained on all positions and their exceptions are charged. The decision "
-            "trees are DSL programs in programs/trees, retrained only by chess-forces trees. The nets "
+            "trees are DSL programs in trees/, retrained only by chess-forces trees. The nets "
             "(src/chess_forces/nets.py) look up one row per square or "
             "square pair, add the rows and apply a small output layer; weights are integers, stored in "
-            "baselines/nets and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an "
+            "nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an "
             "adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); "
             "tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 "
             "operations too, but 24,576 bytes of memory, against at most a few KB for the nets."
         ),
         "",
         (
-            "Force programs: programs/*.dsl, hand-written or found by search. The human rules were written "
+            "Force programs: programs/*.dsl, hand-written or found by search. Paths are relative to this "
+            "folder. The human rules were written "
             "from chess theory and tuned by looking at groups of mistakes over about 20 quick runs."
         ),
     ]
@@ -308,4 +308,4 @@ def _plot(report: Report, path: Path) -> None:
     plt.close(fig)
 
 
-__all__ = ["OUT", "Report", "build", "pareto", "write"]
+__all__ = ["ENDGAME", "PROGRAMS", "Report", "build", "pareto", "write"]

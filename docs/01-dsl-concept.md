@@ -1,6 +1,6 @@
 # Concept note 01: a DSL of forces on a fixed field
 
-Status: D1–D7 decided (D1–D5 approved 2026-11-25, D7 on 2026-11-26). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, plot and the human rule set exist, and the agent loop has run once ([02](02-agent-loop.md)). This note is the design; results are in [reports/kpk.md](../reports/kpk.md), the current state in [STATUS.md](STATUS.md). Figures marked *measured* came from throwaway scripts on 2026-11-25; the KPK table, the rule of the square and the scorer are now covered by tests. Everything else is design or, where marked, speculation.
+Status: D1–D7 decided (D1–D5 approved 2026-11-25, D7 on 2026-11-26). Built and tested: the KPK truth table, the interpreter with operation counter, and the scorer (`chess-forces score`, `chess-forces spec`). Baselines, plot and the human rule set exist, and the agent loop has run once ([02](02-agent-loop.md)). This note is the design; results are in [endgames/kpk/report.md](../endgames/kpk/report.md), the current state in [STATUS.md](STATUS.md). Figures marked *measured* came from throwaway scripts on 2026-11-25; the KPK table, the rule of the square and the scorer are now covered by tests. Everything else is design or, where marked, speculation.
 
 ## The idea in one paragraph
 
@@ -21,7 +21,7 @@ The board is a fixed graph of 64 squares. A piece does not "do" anything on it; 
 | Errors allowed to beat Syzygy, before paying for the program | about 12,131 (92.7% accuracy) | what a program needs to reach the target |
 | Errors allowed to beat lzma, before paying for the program | about 4,064 (97.5% accuracy) | reference |
 
-So the brief's "beating the 24 KB bitbase is likely" is true but too easy, and KPK as a whole is a small test: a program with about 92.7% accuracy and a small size already comes in under Syzygy. The results, with the learned references (nets, trees), are in [reports/kpk.md](../reports/kpk.md); how the reference moved during run r1 is in [02](02-agent-loop.md).
+So the brief's "beating the 24 KB bitbase is likely" is true but too easy, and KPK as a whole is a small test: a program with about 92.7% accuracy and a small size already comes in under Syzygy. The results, with the learned references (nets, trees), are in [endgames/kpk/report.md](../endgames/kpk/report.md); how the reference moved during run r1 is in [02](02-agent-loop.md).
 
 ## Types
 
@@ -68,7 +68,7 @@ Two things changed from the first proposal. The costs are counted from the refer
 
 `any(... for s in king_f(k))` can ask about a square, but it costs 2 operations per square plus the body, but no primitive produces a position after a move. That answers the brief's "no search, or 1–2 plies?": plies are not a setting. Op budget is the only limit.
 
-Example, the rule of the square (`programs/square.dsl`; scored on all 165,676 positions it costs 15.6 B plus 14,135 B of exceptions, 544 false alarms and 29,462 missed wins, matching the earlier measurement exactly):
+Example, the rule of the square (`endgames/kpk/programs/square.dsl`; scored on all 165,676 positions it costs 15.6 B plus 14,135 B of exceptions, 544 false alarms and 29,462 missed wins, matching the earlier measurement exactly):
 
 ```python
 def wins() -> Bool:

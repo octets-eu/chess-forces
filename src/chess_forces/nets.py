@@ -20,10 +20,10 @@ from pathlib import Path
 
 import numpy as np
 
-from . import score
+from . import endgames, score
 from .dsl import EXCEPTION_LOOKUP_OPS, TIERS
 
-NETS_DIR = Path(__file__).resolve().parents[2] / "baselines" / "nets"
+NETS_DIR = endgames.KPK.nets
 
 
 @dataclass(frozen=True)

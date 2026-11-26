@@ -7,7 +7,7 @@ from chess_forces.baselines import Point
 
 
 def test_saved_trees_are_what_training_gives_now():
-    """programs/trees holds the tree baselines; retraining must give the same text, so a library
+    """endgames/kpk/trees holds the tree baselines; retraining must give the same text, so a library
     change is noticed. train_trees raises if a program and its tree disagree on any position."""
     task = score.kpk_task()
     trained = baselines.train_trees(task)

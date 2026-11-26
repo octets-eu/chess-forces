@@ -5,7 +5,7 @@ Status: built; first run (r1) done on 2026-11-25 within a small, capped budget; 
 ## One unit of work
 
 1. Pick an island. Each island aims at one operation tier (256, 1,024, 1,024 and 4,096), so diversity comes from different compute budgets, not only from random restarts. Islands do not mix in v1.
-2. Build a prompt: the language and scoring rules (cached prefix), two parents from the island (the stronger one more often) with their scores, their largest error groups and a dozen wrong positions with the true result, the bar at that tier (the best net or table in reports/kpk.md), and the last rejected proposals with the reason. Since 2026-11-26 the target is the endgame's Syzygy file and the nets are references; the prompt is to show the best force program of the tier and the Syzygy size instead (not built, STATUS).
+2. Build a prompt: the language and scoring rules (cached prefix), two parents from the island (the stronger one more often) with their scores, their largest error groups and a dozen wrong positions with the true result, the bar at that tier (the best net or table in endgames/kpk/report.md), and the last rejected proposals with the reason. Since 2026-11-26 the target is the endgame's Syzygy file and the nets are references; the prompt is to show the best force program of the tier and the Syzygy size instead (not built, STATUS).
 3. Claude (Haiku 5.5, medium effort) answers with one program. Anything that is not a single valid DSL program, or that needs more operations than the tier allows, is rejected locally and costs nothing beyond the call.
 4. Score it on all 165,676 positions, store it (program, score, error groups), skip duplicates by canonical hash.
 

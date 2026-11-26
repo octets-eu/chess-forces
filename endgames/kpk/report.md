@@ -43,7 +43,7 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 | decision tree, 8 leaves | 13,288 | 39.9 | 13,248.3 | 26,881 | 80 |
 | decision tree, 2 leaves | 15,028 | 9.7 | 15,017.8 | 33,400 | 53 |
 | decision tree, 4 leaves | 15,040 | 22.6 | 15,017.8 | 33,400 | 75 |
-| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 289,752 (est) |
+| lzma of the bitbase | 3,341 | 3,341.0 | 0.0 | 0 | 272,874 (est) |
 | Syzygy KPvK.rtbw | 7,824 | 7,824.0 | 0.0 | 0 | – |
 | bitbase (all slots) ★ | 24,576 | 24,576.0 | 0.0 | 0 | 20 |
 
@@ -58,6 +58,6 @@ Tables and learned models are references, not targets: they show how much of a w
 | 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,459 B (evolved, 1,024 ops) | +2,281 B |
 | 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,459 B (evolved, 1,024 ops) | +2,281 B |
 
-★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in programs/trees, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in baselines/nets and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
+★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations were not measured; lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 
-Force programs: programs/*.dsl, hand-written or found by search. The human rules were written from chess theory and tuned by looking at groups of mistakes over about 20 quick runs.
+Force programs: programs/*.dsl, hand-written or found by search. Paths are relative to this folder. The human rules were written from chess theory and tuned by looking at groups of mistakes over about 20 quick runs.

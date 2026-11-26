@@ -17,7 +17,7 @@ from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolE
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import dsl, score
+from . import dsl, endgames, score
 from .budget import BudgetExceeded, Guard, NotBilled
 from .score import DslError, OverBudget
 
@@ -32,7 +32,7 @@ LEGACY_ISLANDS = (256, 1024, 1024, 4096)  # run r1, before islands were stored
 MAX_TOKENS = 6000
 SEEDS = ("always_win", "square", "human")
 CODE = re.compile(r"\x60\x60\x60[a-zA-Z]*\n(.*?)\x60\x60\x60", re.DOTALL)
-PROGRAMS = Path(__file__).resolve().parents[2] / "programs"
+PROGRAMS = endgames.KPK.programs
 
 
 SYSTEM = """You improve small programs that decide whether the strong side wins a chess endgame.
@@ -362,7 +362,7 @@ def _block(s: Scored, label: str) -> str:
 
 @dataclass
 class Bars:
-    """Best totals known at each tier from the baseline report (reports/kpk.json), force programs left out."""
+    """Best totals known at each tier from the endgame's report (endgames/kpk/report.json), force programs left out."""
 
     by_tier: dict[int, tuple[float, str]]
 

@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import budget, kpk
+from . import budget, endgames, kpk
 
 
 def _kpk(_args) -> int:
@@ -28,8 +28,16 @@ def _score(args) -> int:
 
     try:
         text = sys.stdin.read() if args.file == "-" else Path(args.file).read_text()
+        folder = None if args.file == "-" else endgames.of_path(args.file)
+        if folder and args.task and args.task != folder.name:
+            print(
+                f"rejected: {args.file} is in the {folder.name} folder, not {args.task}",
+                file=sys.stderr,
+            )
+            return 1
+        name = folder.name if folder else (args.task or "kpk")
         t0 = time.perf_counter()
-        task = scoring.TASKS[args.task]()
+        task = scoring.TASKS[name]()
         t1 = time.perf_counter()
         report = scoring.score(text, task)
     except (scoring.DslError, scoring.OverBudget, OSError) as e:
@@ -95,7 +103,7 @@ def _evolve(args) -> int:
         repair=not args.no_repair,
         plateau=args.plateau,
     )
-    bars = search.Bars.load(Path(__file__).resolve().parents[2] / "reports" / "kpk.json")
+    bars = search.Bars.load(endgames.KPK.report("json"))
     if args.show_prompt:
         s = search.Search(
             settings, Guard(), None, archive, search.Evaluator(score.kpk_task()), bars
@@ -182,9 +190,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="chess-forces")
     sub = ap.add_subparsers(dest="group", required=True)
     sub.add_parser("kpk", help="build the KPK truth table and check its hash").set_defaults(fn=_kpk)
-    sc = sub.add_parser("score", help="score a program file against a task")
+    sc = sub.add_parser("score", help="score a program file against its endgame")
     sc.add_argument("file", help="program text, or - for stdin")
-    sc.add_argument("--task", default="kpk", choices=["kpk"])
+    sc.add_argument(
+        "--task",
+        default=None,
+        choices=sorted(endgames.ALL),
+        help="endgame for files outside endgames/<name>/ (default kpk); a file inside takes its folder's",
+    )
     sc.add_argument("--json", action="store_true")
     sc.set_defaults(fn=_score)
     sub.add_parser("spec", help="print the language").set_defaults(fn=_spec)
@@ -192,7 +205,7 @@ def main(argv=None) -> int:
         "report", help="baselines, frontier and plot for KPK (about a minute)"
     ).set_defaults(fn=_report)
     sub.add_parser(
-        "trees", help="retrain the decision-tree baselines and write programs/trees/*.dsl"
+        "trees", help="retrain the decision-tree baselines and write endgames/kpk/trees/*.dsl"
     ).set_defaults(fn=_trees)
     ev = sub.add_parser("evolve", help="run the search loop (spends API money)")
     ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")

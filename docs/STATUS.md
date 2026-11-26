@@ -1,6 +1,6 @@
 # Status and handover (2026-11-26)
 
-Read this first; new to the project? Start with the [beginner's guide](00-beginners-guide.md). Details: [01 DSL concept and results](01-dsl-concept.md), [02 agent loop](02-agent-loop.md), [reports/kpk.md](../reports/kpk.md). Working rules for this machine are kept in a local, unpublished `CLAUDE.md`.
+Read this first; new to the project? Start with the [beginner's guide](00-beginners-guide.md). Details: [01 DSL concept and results](01-dsl-concept.md), [02 agent loop](02-agent-loop.md), [endgames/kpk/report.md](../endgames/kpk/report.md). Working rules for this machine are kept in a local, unpublished `CLAUDE.md`.
 
 ## What this is
 
@@ -13,11 +13,11 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 ## Where things stand
 
 - Phase 1 is done: KPK table (own rules code, verified against Syzygy position by position), the language and its interpreter, the scorer, baselines, a hand-written rule set, a plot. A single-user search loop (Phase 2) exists and has run once (r1). 134 tests pass.
-- KPK against Syzygy (7,824 B): three force programs are smaller: run r1 4,459 B (959 operations) and 5,367 B (232 operations), human rules 5,639 B (273 operations). A trimmed r1 program, 4,430 B at 1,019 operations, exists only in `state/` (see the first try of trimming below). Current numbers: [reports/kpk.md](../reports/kpk.md).
+- KPK against Syzygy (7,824 B): three force programs are smaller: run r1 4,459 B (959 operations) and 5,367 B (232 operations), human rules 5,639 B (273 operations). A trimmed r1 program, 4,430 B at 1,019 operations, exists only in `state/` (see the first try of trimming below). Current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md).
 - Two caveats on that win. The program sizes are information bounds (grammar code, log2 C(N, k)), while Syzygy's is a real file; a real exception list is larger (Elias–Fano without its select index: 8–14% at 100 to 3,000 errors, 28% at 10,000, see 01; the force programs have about 5,400), and real sizes are not in the report yet. Syzygy's operations were not measured, so "smaller at the same compute" is not shown either.
 - References: a table net (2,178 B, 235 operations) and lzma of the bitbase (3,341 B, operations a rough estimate) are smaller than every force program. At KPK, being smaller than Syzygy is therefore a weak result.
 - What the search found is known chess (opposition, corner, support, blockade), not new concepts. Force programs are small (about 150 B); almost all their cost is exceptions.
-- Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
+- Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git
 
@@ -27,7 +27,7 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 ## Where things are
 
 - `src/chess_forces/`: `dsl.py` language, interpreter and costs; `score.py` scorer; `kpk.py`, `board.py` rules and table; `baselines.py`, `nets.py`, `report.py` other methods and the plot; `search.py` loop; `budget.py` spend guard; `cli.py` commands.
-- `programs/*.dsl`: hand-written and found programs (text, never run as Python). `programs/trees/`: the decision-tree baselines as DSL programs; the report reads them, only `chess-forces trees` retrains them, and a test checks that retraining gives the same text. `baselines/nets/`: trained nets (integers) and the sweep record. `reports/`: table, plot, JSON.
+- `endgames/kpk/`: everything about KPK; the folder decides the endgame (`src/chess_forces/endgames.py`). `programs/*.dsl`: hand-written and found programs (text, never run as Python). `trees/`: the decision-tree baselines as DSL programs; the report reads them, only `chess-forces trees` retrains them, and a test checks that retraining gives the same text. `nets/`: trained nets (integers) and the sweep record. `report.md`, `report.json`, `report.png`: table, plot, JSON.
 - Local only, gitignored: `state/` with the spend ledger `budget.sqlite`, `search-r1.sqlite` (all 1,076 proposals with their texts and scores) and `run-r1/`. Deleting them loses the run archive, not the results in the repository.
 - Syzygy 3-4-5 tables live next to the repository in `../syzygy`. They are read only by tests and by one-off scripts through python-chess, which `src/` must not import.
 
@@ -36,8 +36,8 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 ```text
 uv run chess-forces kpk | spec | score FILE | report | trees | train-nets | evolve ... | budget status
 uv run pytest            # about 30 s
-uv run chess-forces report        # rebuilds reports/ (about 15 s)
-uv run chess-forces trees         # retrains the decision trees into programs/trees (a few seconds)
+uv run chess-forces report        # rebuilds endgames/kpk/report.* (about 15 s)
+uv run chess-forces trees         # retrains the decision trees into endgames/kpk/trees (a few seconds)
 uv run chess-forces train-nets    # retrains the nets (about 25 minutes, all cores)
 uv run chess-forces evolve --run r2 --usd 3   # needs the API key and the owner's budget confirmation
 ```
