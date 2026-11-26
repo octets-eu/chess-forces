@@ -1,6 +1,6 @@
 # Concept note 04: the next endgame, KQvKP
 
-Status: proposed 2026-11-26. Decided by the owner on 2026-11-26: the table source (T1) and the 50-move exception (E1); the rest waits for approval. Nothing of it is built.
+Status: approved 2026-11-26 (T1, E1, L1, S1, B1). Nothing of it is built; the order of work is in STATUS, Next steps.
 
 ## Why KQvKP
 
@@ -56,6 +56,6 @@ About 70 times KPK's positions. Measured on KPK and scaled, so estimates:
 | --- | --- | --- |
 | T1 | Table source | decided 2026-11-26: positions from our own code, results from Syzygy; KPK's own generator as the check |
 | E1 | 50-move rule | decided 2026-11-26: KQvKP starts without it, counted and shown in every report; to be resolved later, listed as an open exception |
-| L1 | Language 0.4 | proposed: `man(side, kind)`, prompts per endgame |
-| S1 | Scale | proposed: parallel scoring and atoms, at most about 200 features per tree, all positions |
-| B1 | Paid run on KQvKP | proposed: only after a saturated pool and a smoke test, cap 3 USD |
+| L1 | Language 0.4 | approved 2026-11-26: `man(side, kind)`, prompts per endgame |
+| S1 | Scale | approved 2026-11-26: parallel scoring and atoms, at most about 200 features per tree, all positions |
+| B1 | Paid run on KQvKP | approved 2026-11-26: only after a saturated pool and a smoke test, cap 3 USD |
