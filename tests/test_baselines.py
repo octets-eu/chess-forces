@@ -102,5 +102,9 @@ def test_enumerated_trees_are_pinned():
         "atomtree-1562",
     ):
         assert score.score((report.PROGRAMS / f"{name}.dsl").read_text(), task).errors == 0, name
+    for name in ("pool-r1-exact", "pool-exact", "pool30-exact"):
+        assert score.score((report.PROGRAMS / f"{name}.dsl").read_text(), task).errors == 0, name
+    p = score.score((report.PROGRAMS / "pool-r1-256.dsl").read_text(), task)
+    assert p.errors == 158 and p.bytes_total < 1_850
     b = score.score((report.PROGRAMS / "bothtree-0256.dsl").read_text(), task)
     assert b.errors == 870 and b.bytes_total < 2_600

@@ -1,6 +1,7 @@
 """chess-forces command line: KPK table and API budget."""
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -90,6 +91,85 @@ def _promote(args) -> int:
     if any(o.promoted for o in outcomes) and not args.no_report:
         for path in rep.write(rep.build()):
             print(f"wrote {path}")
+    return 0
+
+
+def _concepts(args) -> int:
+    from . import concepts, score
+    from .budget import Guard, api_key, default_path, exit_on_budget, usd
+
+    kpk = endgames.KPK
+    task = kpk.task()
+    r1 = {"r1": (kpk.programs / "r1-unit-831.dsl").read_text()}
+    state = default_path().parent
+    if args.cmd == "baseline":
+        out = state / "concepts-baseline"
+        out.mkdir(parents=True, exist_ok=True)
+        rows = (
+            ("30 atoms + enumerated comparisons", "base", False, None),
+            ("45 atoms + stronger enumeration", "stronger", True, None),
+            ("45 atoms + stronger enumeration + concepts of r1-unit-831", "stronger-r1", True, r1),
+        )
+        print("| Pool | Leaves | Errors | Bytes (score) | Real bytes | Max ops |")
+        print("| --- | ---: | ---: | ---: | ---: | ---: |")
+        for label, slug, stronger, programs in rows:
+            pool, _ = concepts.build_pool(task, args.keep, programs, stronger=stronger)
+            for size, leaves in (("256", 256), ("exact", None)):
+                g = pool.grow(leaves)
+                r = score.score(g.text, task)
+                if r.errors != g.errors:
+                    raise AssertionError(f"{label}: the program and its tree disagree")
+                (out / f"{slug}-{size}.dsl").write_text(g.text)
+                n = g.tree.get_n_leaves()
+                print(
+                    f"| {label} | {n:,} | {g.errors:,} | {g.bytes_total:,.0f} | {g.real_bytes:,} | {r.ops_max:,} |",
+                    flush=True,
+                )
+        print(f"programs written to {out}")
+        return 0
+    pool, rest = concepts.build_pool(task, args.keep, r1)
+    out = state / f"concepts-{args.run}"
+    if args.cmd == "compare":
+        data = json.loads((out / "outcomes.json").read_text())
+        model = [concepts.concept_from_record(r, task) for r in data["accepted"]]
+        concepts.compare(pool, rest, model, out)
+        return 0
+    import anthropic
+
+    settings = concepts.LoopSettings(
+        run=args.run,
+        model=args.model,
+        effort=args.effort,
+        max_tokens=args.max_tokens,
+        workers=args.workers,
+        plateau=args.plateau,
+        min_bytes_per_usd=args.min_bytes_per_usd,
+    )
+    guard = Guard(run=args.run, run_limit_usd=args.usd)
+    client = anthropic.Anthropic(api_key=api_key(), max_retries=0, timeout=180)
+    loop = concepts.ConceptLoop(
+        settings, guard, client, pool, out, log=lambda m: print(m, flush=True)
+    )
+    why = "stopped"
+    with exit_on_budget():
+        try:
+            why = loop.run(args.units)
+        finally:
+            loop.save(out / "outcomes.json")
+            acc = [o for o in loop.outcomes if o.status == "accepted"]
+            print(
+                f"stop: {why}; {len(loop.outcomes)} candidates, {len(acc)} accepted; "
+                f"run spend {usd(guard.run_spent())} USD"
+            )
+            _promote(
+                argparse.Namespace(
+                    files=[str(out / "best-256.dsl"), str(out / "best-exact.dsl")],
+                    endgame="kpk",
+                    prefix="",
+                    name=[f"{args.run}-best-256", f"{args.run}-best-exact"],
+                    no_report=False,
+                )
+            )
     return 0
 
 
@@ -250,6 +330,27 @@ def main(argv=None) -> int:
     pr.add_argument("--name", action="append", help="file name in programs/ (once per file)")
     pr.add_argument("--no-report", action="store_true", help="do not rebuild the report")
     pr.set_defaults(fn=_promote)
+    co = sub.add_parser("concepts", help="concept loop, docs/03-concept-loop.md")
+    cosub = co.add_subparsers(dest="cmd", required=True)
+    for name, text in (
+        ("baseline", "free: trees over atoms, enumerated comparisons and r1's concepts"),
+        ("run", "paid: a model proposes concepts, trees judge them"),
+        ("compare", "free: the run's concepts against as many enumerated ones"),
+    ):
+        p = cosub.add_parser(name, help=text)
+        p.add_argument("--keep", type=int, default=500, help="enumerated comparisons in the pool")
+        if name != "baseline":
+            p.add_argument("--run", default="c1")
+        if name == "run":
+            p.add_argument("--usd", required=True, help="hard limit for this run in USD")
+            p.add_argument("--units", type=int, default=None, help="stop after this many calls")
+            p.add_argument("--workers", type=int, default=8)
+            p.add_argument("--model", default="claude-haiku-5-5")
+            p.add_argument("--effort", default="medium", choices=["low", "medium", "high"])
+            p.add_argument("--max-tokens", type=int, default=9000)
+            p.add_argument("--plateau", type=int, default=200)
+            p.add_argument("--min-bytes-per-usd", type=float, default=100.0)
+    co.set_defaults(fn=_concepts)
     ev = sub.add_parser("evolve", help="run the search loop (spends API money)")
     ev.add_argument("--run", default="r1", help="name of the run; resumes when it exists")
     ev.add_argument("--usd", required=True, help="hard limit for this run in USD")

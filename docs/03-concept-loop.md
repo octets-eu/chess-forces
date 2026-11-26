@@ -1,6 +1,6 @@
 # Concept note 03: concepts by a model, combined by trees
 
-Status: proposed 2026-11-26, waiting for the owner's approval. Nothing of it is built. Current results are in [STATUS.md](STATUS.md) and [endgames/kpk/analysis.md](../endgames/kpk/analysis.md).
+Status: approved 2026-11-26 (C1–C5 as proposed) and built: `src/chess_forces/concepts.py`, `chess-forces concepts baseline | run | compare`. The baseline is measured (below); the paid run follows. Current results are in [STATUS.md](STATUS.md) and [endgames/kpk/analysis.md](../endgames/kpk/analysis.md).
 
 ## Why
 
@@ -27,6 +27,18 @@ So the model's value was in its concepts, not in how it combined them, and its 1
 ## A fair baseline first (free)
 
 The model must beat a strong enumeration, not a weak one. Before any paid call the enumeration gets more quantities: walks of both kings to more squares, file and rank differences of the kings (opposition), counts of squares in fields (for example the weak king's squares guarded by the strong side), and sums of two quantities compared with a third, limited to the most informative ones. Its numbers are recorded first. The fair comparison in the run: the bytes saved by the model's accepted concepts against the bytes saved by as many concepts taken from further down the enumeration's ranking.
+
+## Baseline, measured (C3)
+
+`uv run chess-forces concepts baseline`, 2026-11-26. The stronger enumeration has 45 atoms (the 30 before, three walks of the weak king around the strong side's guarded squares, file and rank differences of the kings and the pawn, the kings' file and rank distance, counts of the weak king's free and guarded squares, of the squares both kings attack, and of the pawn's path) and, among the 500 kept comparisons, sums of two of the 12 most informative atoms compared with a third.
+
+| Pool | 256 leaves: errors | real bytes | Exact: leaves | real bytes | Max ops (exact) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 30 atoms + enumerated comparisons | 1,502 | 3,012 | 1,139 | 5,327 | 1,235 |
+| 45 atoms + stronger enumeration | 756 | 2,347 | 545 | 2,789 | 1,896 |
+| the same + the 10 concepts of `r1-unit-831` | 158 | 1,857 | 365 | 2,201 | 2,841 |
+
+The stronger enumeration alone gives an exact program of 2,789 B, smaller than the smallest exact net (4,018 B); with r1's concepts the exact program is 2,201 B, smaller than the best net with errors (2,351 B, 530 errors). The last row is the pool the paid run starts from; its programs are promoted (`pool-r1-256`, `pool-r1-exact`, `pool-exact`, `pool30-exact`). The cost is operations: every atom is computed first, up to 2,856 operations per position.
 
 ## What is measured
 
