@@ -52,6 +52,21 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 2. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
 3. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
 
+## Plan: close KPK (proposed 2026-11-26, waiting for approval)
+
+All free, on a branch `close-kpk`, one commit per step, tests green after each. It builds the agreed ideas "One folder per endgame" and "Honest numbers" below, as far as KPK needs them.
+
+1. **Endgame folder.** `endgames/kpk/` holds `programs/` (force programs), `trees/`, `nets/` (with `sweep.json`) and `syzygy.json` (step 5); its root holds `report.md`, `report.json`, `report.png` and later `analysis.md`. `programs/`, `baselines/` and `reports/` go away (`git mv`, history kept). One endgame description in `src/` (name, folder, table) is used by report, search, trees, nets and `score`, which takes the endgame from the path. A test scores every program in the folder on KPK; the pinned numbers stay.
+2. **The report finds programs itself.** Every `*.dsl` in `programs/` is plotted, named by its file name (`evolved-1024`, `human`), so the label leads to the file. `PROGRAM_NAMES` goes.
+3. **`chess-forces promote FILE...`.** Scores each file; it is copied into `programs/` if it is smaller than every force program already there within its tier, with a docstring on where it came from (source, date, bytes, operations), and the report is rebuilt. Older programs stay. Candidates: the trimmed program (4,430 B at 1,019 operations, tier 1,024) and program 831 (4,426 B at 1,259 operations, tier 4,096; text in `state/run-r1/review1.json`). The search loop calls `promote` at the end of a run (small change in `evolve`).
+4. **Real sizes next to the bounds.** Programs and trees: the grammar choices written as one mixed-radix integer, which is exact and decodable and needs at most one byte more than the bound; a test decodes it back. Exceptions: Elias–Fano with a sampled select index, so one position can be looked up without unpacking the rest, or a plain bitmap where that is smaller; a test checks every position. Nets: their integer weights packed with lzma. The report gets a real-size column, and the headline against Syzygy uses it. The lookup cost stays the assumed 32 operations.
+5. **Syzygy's operations, roughly.** A script outside `src/` (python-chess may not be imported there) probes all 165,676 positions with a counting copy of the decoder: block search steps, symbols decoded, pair expansions, capture check. Step counts times per-step costs from the C reference code, plus a hand count of the index calculation, give mean and worst case; it writes `syzygy.json`, which the report reads. Marked as an estimate.
+6. **lzma's operations pinned.** One timing, written down with its date and machine, instead of a new one on every run, so the report stops changing by itself. Still marked as an estimate.
+7. **`analysis.md`** in `endgames/kpk/`: the result against Syzygy on real sizes, the references per tier, the best force programs and the chess ideas they use, what did not work (r1, the first trimming trial), what stays open, every number with its command.
+8. **Docs** follow the new paths (STATUS, README, guide, 01, 02, `CLAUDE.md`); STATUS marks KPK as closed.
+
+Not part of this: the soft-cap search changes (question 1 above), the new search prompt, and anything paid.
+
 ## Agreed ideas, not built
 
 **Three numbers instead of one cap.** Every method gets bytes stored (the score so far), steps (worst case) and bytes held (what must be unpacked into memory before the first answer; see the beginner's guide). The earlier 8 KB cap on held bytes was fitted to the nets and is withdrawn. Which limit is used decides who leads: in the nets already trained, programs lead at 1 KB of held bytes and nets from 2 KB up, but the nets were not tuned for little memory.
@@ -124,7 +139,7 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. Close KPK, all free: the endgame folder and `promote` (above), promote the trimmed program, real sizes in the report, then `analysis.md`.
+2. Close KPK, all free: the plan above.
 3. Concept note 03 for 5 pieces (above).
 4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
 5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
