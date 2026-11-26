@@ -14,6 +14,7 @@ Status: KPK is closed, see [endgames/kpk/analysis.md](endgames/kpk/analysis.md);
     uv run chess-forces train-nets   # retrain the net baselines (about 25 minutes, all cores)
     uv run chess-forces promote FILE --name NAME   # add a program to endgames/kpk/programs if it beats its tier
     uv run python scripts/syzygy_ops.py   # estimate Syzygy's operations (needs the tables)
+    uv run python scripts/enumerate_concepts.py   # concepts by enumeration, combined by trees
     uv run chess-forces score endgames/kpk/programs/square.dsl   # size, exceptions, operations
     uv run chess-forces spec   # the language, generated from the code
     uv run pytest             # tests; the Syzygy check is skipped if the tables are missing

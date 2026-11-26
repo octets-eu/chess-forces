@@ -12,11 +12,12 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ## Where things stand
 
-- **KPK: first pass finished and reviewed** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). The review reopened it (below). Five force programs from the first pass are smaller than Syzygy's `KPvK.rtbw` (7,824 B) in real bytes: the best, `r1-unit-831`, is 4,886 B (−38%) at 1,259 operations at most, 403 on average; Syzygy needs an estimated 2,122 at most, 983 on average. Real bytes are an actual encoding (`codec.py`), about 10% above the score's bound.
-- References are smaller still: a table net 2,351 B real at 235 operations, lzma of the bitbase 3,341 B at an estimated 282,600. 29 nets are exact (no exceptions); the smallest is 4,018 B real at 611 operations. Every exact method is kept and shown in the report in its own colour. No force program is exact. At KPK, beating Syzygy says more about Syzygy's general format than about the concepts; the real test is 5 pieces and more.
-- What the search found is known chess (square, key squares, opposition, rook-pawn corner, blockade, captures), not new concepts. Programs are small (about 150 B); almost all their cost is exceptions, most of them with a central pawn on ranks 2 to 4.
-- Review of KPK (`scripts/force_trees.py`, no model): a greedy tree over the 10 concepts of r1's best program is an exact DSL program of 7,110 B, smaller than Syzygy; with 256 leaves it is 3,577 B real, 27% below r1's best. The 3.2% errors were a limit of the search, not of the language. Both programs are over the language's 40,000-character limit, a limit on text rather than information; the 64-leaf tree fits and is promoted (`forcetree-0064`, 4,480 B real).
-- Phase 1 is done and a single-user search loop exists (one run, r1). 182 tests pass.
+- **KPK: first pass, review and second pass done** (2026-11-26): [endgames/kpk/analysis.md](../endgames/kpk/analysis.md). Best force program `bothtree-0256`, 2,640 B real (−66% against Syzygy's 7,824 B), 870 errors; smallest exact force program `bothtree-0796`, 4,136 B real (−47%), no exceptions at all. Both are trees over concepts, built without a model; they compute every concept first and need about 1,200 operations on average and 2,350 at most, a little above Syzygy's estimated worst case (2,122). The model's programs from run r1 stay at 4,886 B and below 1,300 operations.
+- The review showed that r1's 3.2% errors were a limit of the search, not of the language. In the second pass, concepts found by enumerating comparisons of force quantities nearly matched the model's concepts (3,014 against 2,939 B at 256 leaves) and lost for an exact program (5,270 against 4,258 B); together they are best. The enumerated concepts that matter are familiar chess (rule of the square, king races to the squares in front of the pawn).
+- References: the best net is still smaller below 2,400 B (2,351 B real, 530 errors, 235 operations), and the smallest exact net (4,018 B, 611 operations) is a little smaller and much faster than the smallest exact program. lzma of the bitbase is 3,341 B at an estimated 282,600 operations. Every exact method is kept and shown in the report in its own colour.
+- Language 0.3 (2026-11-26): programs are limited by grammar code (128 KiB), not by characters; every score is unchanged.
+- What the search found is known chess; so did the enumeration. Nothing new has been shown.
+- Phase 1 is done and a single-user search loop exists (one run, r1). 204 tests pass.
 - Nothing beyond KPK has been started. Scoring one program takes about 11 µs per position (1.8 s for KPK's 165,676 positions, `chess-forces score endgames/kpk/programs/evolved-1024.dsl`, 2026-11-26). A 5-piece table has a few hundred million positions, so one program would take 1–2 hours on one core (estimate). Transfer (whether KPK ideas help in other endgames) is a second question, not tested.
 
 ## Git
@@ -26,7 +27,7 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ## Where things are
 
-- `src/chess_forces/`: `dsl.py` language, interpreter and costs; `score.py` scorer; `codec.py` real encodings (program, exceptions, nets); `kpk.py`, `board.py` rules and table; `endgames.py` the endgame folders; `baselines.py`, `nets.py`, `report.py` other methods and the plot; `promote.py` moving programs into a folder; `search.py` loop; `budget.py` spend guard; `cli.py` commands. `scripts/syzygy_ops.py`: Syzygy's operations (uses python-chess, so not in `src/`).
+- `src/chess_forces/`: `dsl.py` language, interpreter and costs; `score.py` scorer; `codec.py` real encodings (program, exceptions, nets); `kpk.py`, `board.py` rules and table; `endgames.py` the endgame folders; `baselines.py`, `nets.py`, `report.py` other methods and the plot; `promote.py` moving programs into a folder; `search.py` loop; `budget.py` spend guard; `cli.py` commands. `scripts/`: experiments and tools outside the package: `syzygy_ops.py` (uses python-chess, so not in `src/`), `force_trees.py`, `enumerate_concepts.py`, `rejected.py`, `trim.py`, `review.py` (paid, OpenRouter).
 - `endgames/kpk/`: everything about KPK; the folder decides the endgame (`src/chess_forces/endgames.py`). `programs/*.dsl`: hand-written and found programs (text, never run as Python). `trees/`: the decision-tree baselines as DSL programs; the report reads them, only `chess-forces trees` retrains them, and a test checks that retraining gives the same text. `nets/`: trained nets (integers) and the sweep record. `syzygy.json`: Syzygy's operations, an estimate. `report.md`, `report.json`, `report.png`: table, plot, JSON. `analysis.md`: the written result.
 - Local only, gitignored: `state/` with the spend ledger `budget.sqlite`, `search-r1.sqlite` (all 1,076 proposals with their texts and scores) and `run-r1/`. Deleting them loses the run archive, not the results in the repository.
 - Syzygy 3-4-5 tables live next to the repository in `../syzygy`. They are read only by tests and by one-off scripts through python-chess, which `src/` must not import.
@@ -35,12 +36,16 @@ The target is the Syzygy file of each endgame. KPK is too small to show much: it
 
 ```text
 uv run chess-forces kpk | spec | score FILE | report | trees | promote FILE... | train-nets | evolve ... | budget status
-uv run pytest            # about 70 s
+uv run pytest            # about 3 minutes
 uv run chess-forces report        # rebuilds endgames/kpk/report.* (about 15 s)
 uv run chess-forces trees         # retrains the decision trees into endgames/kpk/trees (a few seconds)
 uv run chess-forces train-nets    # retrains the nets (about 25 minutes, all cores)
 uv run chess-forces promote FILE --name NAME   # copies a program into endgames/kpk/programs if it beats its tier
 uv run python scripts/syzygy_ops.py            # rewrites endgames/kpk/syzygy.json (about 5 s)
+uv run python scripts/force_trees.py           # trees over the concepts of one program, as DSL
+uv run python scripts/enumerate_concepts.py    # concepts by enumeration against the model's (about 3 minutes)
+uv run python scripts/rejected.py --run r1     # programs a run rejected for too many operations
+uv run python scripts/trim.py --rejected state/run-r1/rejected.json   # mechanical trimming
 uv run chess-forces evolve --run r2 --usd 3   # needs the API key and the owner's budget confirmation
 ```
 
@@ -50,11 +55,10 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 
 ## Waiting for the owner
 
-1. Merge `close-kpk` into `main`, and push?
+1. Merge the local branches `close-kpk` and `kpk-pass2` into `main`, and push?
 2. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
 3. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
 4. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
-5. KPK second pass, all free: (a) language limits counted in bits of grammar code instead of characters, so the 256-leaf and exact trees fit (a language change: `DSL_VERSION` bump, every score redone); (b) concepts by enumeration of small DSL expressions, combined by trees, against r1's concepts at equal size; (c) the trimmer and the reviewer script moved from `state/scripts` into `scripts/`, so no approach lives only on one machine.
 
 ## Approaches, all kept
 
@@ -63,11 +67,11 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 | Search loop: a model proposes whole programs | tokens | textbook concepts, best 4,426 B (bound) | `search.py`, run r1 |
 | Mechanical trimming, no model | free | r1 program 966 from 4,476 to 4,430 B | `scripts/trim.py`, input from `scripts/rejected.py` |
 | Reviewer models on rejected programs | tokens | one useful variant (4,472 B at 388 operations) | `scripts/review.py` (OpenRouter, own ledger) |
-| Trees over force concepts, written as DSL | free | exact program 7,110 B; 3,577 B real at 256 leaves | `scripts/force_trees.py` |
+| Trees over force concepts, written as DSL | free | 3,577 B real at 256 leaves; exact 7,110 B | `scripts/force_trees.py` |
 | Decision trees over simple features | free | reference; exact at 10,672 B | `chess-forces trees`, `scripts/force_trees.py` |
 | Table nets | free (CPU) | reference; 29 exact, smallest 4,018 B real | `nets.py`, `chess-forces train-nets` |
-| Concepts found by enumeration of small DSL expressions | free | not built | proposed 2026-11-26 |
-| Concepts by a model, combined by a tree | tokens for concepts only | not built | proposed 2026-11-26 |
+| Concepts by enumeration (comparisons of 30 force quantities), combined by trees | free | 3,014 B real at 256 leaves; exact 5,270 B | `scripts/enumerate_concepts.py` |
+| Concepts by a model, combined by a tree (with the enumerated ones) | tokens for concepts only | r1's concepts: 2,939 B; with enumerated ones 2,640 B, exact 4,136 B | `scripts/enumerate_concepts.py` |
 | Keep every program, check every tier (soft cap) | free | not built; would have kept program 831 | agreed ideas below |
 
 ## KPK first pass (2026-11-26)
@@ -139,8 +143,7 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. KPK second pass (question 5), then a new review.
-3. Concept note 03 for 5 pieces (above).
-4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
-5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
-6. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
+2. Concept note 03 for 5 pieces (above). The KPK lesson for it: let free trees combine concepts, spend tokens on concepts only, and enumerate as a baseline.
+3. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
+4. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
+5. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.

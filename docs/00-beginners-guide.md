@@ -95,9 +95,10 @@ Every dot is a method. Lower and further left is better: less total length and l
 
 As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/report.md); the full write-up: [analysis.md](../endgames/kpk/analysis.md)):
 
-- Five programs in our language are smaller than the Syzygy file for KPK (7,824 bytes), measured as real files that can be decoded again. The best one, found by the AI, needs 4,886 bytes and at most 1,259 steps; the hand-written rules need 6,207 bytes. Syzygy needs an estimated 2,100 steps at most.
-- That is a weak test. KPK is so small that a compressed table (3,341 bytes) and a small neural network (2,351 bytes) are smaller still. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
-- The plot shows the score, which is the shortest possible encoding; a real file is about 10% larger. The comparison with Syzygy uses the real files.
+- Almost every program in our language is smaller than the Syzygy file for KPK (7,824 bytes), measured as real files that can be decoded again. The best one needs 2,640 bytes, and one needs 4,136 bytes with no list of mistakes at all. They were built by a computer, without the AI: it combined ideas (concepts) into a decision tree. The best program the AI wrote alone needs 4,886 bytes.
+- The ideas themselves came from the AI's programs and from a computer that tried thousands of simple comparisons. Both kinds of ideas are useful; together they are best.
+- KPK is still a weak test. A small neural network is smaller (2,351 bytes, with some mistakes), and one without mistakes needs 4,018 bytes. They are shown as references: they tell how much of a win comes from the ideas in a program and how much from the endgame being easy.
+- The plot shows the score, which is the shortest possible encoding; a real file is about 10% larger for programs with many mistakes. The comparison with Syzygy uses the real files.
 - The ideas the programs use are known chess: the rule of the square, opposition, key squares, the rook-pawn corner.
 - An earlier statement that the AI had beaten the neural networks was wrong, because the networks we compared with were too weak.
 
@@ -106,7 +107,7 @@ As of 2026-11-26 (current numbers: [endgames/kpk/report.md](../endgames/kpk/repo
 - Do programs stay smaller than Syzygy in endgames with five pieces and more, where the files are megabytes? This is the real question. Not tested.
 - Is the win in KPK more than the format? Syzygy's file is built for every endgame alike; the references show that KPK alone can be packed much smaller.
 - Do ideas found in one endgame help in the next one? This is called *transfer*. Not tested.
-- Does the AI find something new, rather than known chess ideas? Not so far.
+- Does the AI, or the computer's own search through comparisons, find something new, rather than known chess ideas? Not so far.
 
 ## Try it yourself
 

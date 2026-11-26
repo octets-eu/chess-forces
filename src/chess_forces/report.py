@@ -312,15 +312,17 @@ def _plot(report: Report, path: Path) -> None:
         "decision tree, 64 leaves": (9, -4, "left"),
         "human": ("at", 330, 6700),
         "evolved-256": (9, -14, "left"),
-        "evolved-1024": ("at", 1700, 5100),
-        "r1-trimmed-966": ("at", 1700, 4700),
-        "r1-unit-831": ("at", 1700, 4330),
-        "forcetree-0064": ("at", 1700, 3990),
-        "forcetree-0256": ("at", 1700, 3330),
-        "forcetree-1800": ("at", 1700, 6050),
+        "evolved-1024": ("at", 6000, 5100),
+        "r1-trimmed-966": ("at", 6000, 4700),
+        "r1-unit-831": ("at", 6000, 4330),
+        "forcetree-0064": ("at", 6000, 3700),
+        "forcetree-0256": ("at", 6000, 3180),
+        "atomtree-1562": ("at", 1700, 6150),
+        "enumtree-1132": ("at", 1700, 5600),
+        "bothtree-0796": ("at", 6000, 3990),
         "lzma of the bitbase": (9, 6, "left"),
         "Syzygy KPvK.rtbw": ("at", 2700, 6950),
-        "net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06)": ("at", 1700, 3650),
+        "net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06)": ("at", 6000, 3420),
         "net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0)": ("at", 330, 3020),
         "net pairs3 additive, 5 bit": None,  # named in the report's table; no room on the plot
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
@@ -339,11 +341,16 @@ def _plot(report: Report, path: Path) -> None:
     placed = []
     spots = [(9, 4, "left"), (9, -14, "left"), (9, 16, "left"), (9, -26, "left"), (-9, 4, "right")]
     exact_front = pareto([p for p in report.points if p.errors == 0 and p.kind != "table"])
+    # programs are labelled when they are on the frontier of programs or of exact programs
+    shown = {id(p) for p in pareto([p for p in report.points if p.kind == "force"])}
+    shown |= {
+        id(p) for p in pareto([p for p in report.points if p.kind == "force" and p.errors == 0])
+    }
     chosen = [
         p
         for p in report.points
         if p.ops_max is not None
-        and (p.name in labels or p.name in tier_best or p.kind == "force" or p in exact_front)
+        and (p.name in labels or p.name in tier_best or id(p) in shown or p in exact_front)
         and labels.get(p.name, ()) is not None
     ]
     chosen.sort(key=lambda p: (p.name not in labels, p.ops_max))

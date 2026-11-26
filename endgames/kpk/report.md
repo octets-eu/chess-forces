@@ -8,12 +8,19 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 
 | Force program | Real bytes | Bound | Max ops | Against Syzygy |
 | --- | ---: | ---: | ---: | ---: |
+| bothtree-0256 | 2,640 | 2,569 | 2,367 | -5,184 B (-66%) |
 | forcetree-0256 | 3,577 | 3,390 | 1,357 | -4,247 B (-54%) |
+| bothtree-0796 | 4,136 | 4,129 | 2,335 | -3,688 B (-47%) |
+| bothtree-0806 | 4,229 | 4,221 | 2,354 | -3,595 B (-46%) |
+| conctree-0997 | 4,258 | 4,250 | 2,335 | -3,566 B (-46%) |
+| conctree-1004 | 4,279 | 4,272 | 2,343 | -3,545 B (-45%) |
 | forcetree-0064 | 4,480 | 4,137 | 1,355 | -3,344 B (-43%) |
 | r1-unit-831 | 4,886 | 4,426 | 1,259 | -2,938 B (-38%) |
 | r1-trimmed-966 | 4,890 | 4,430 | 1,019 | -2,934 B (-38%) |
 | evolved-1024 | 4,920 | 4,459 | 959 | -2,904 B (-37%) |
+| enumtree-1132 | 5,270 | 5,263 | 1,235 | -2,554 B (-33%) |
 | evolved-256 | 5,893 | 5,367 | 232 | -1,931 B (-25%) |
+| atomtree-1562 | 6,013 | 6,005 | 1,210 | -1,811 B (-23%) |
 | human | 6,207 | 5,639 | 273 | -1,617 B (-21%) |
 | forcetree-1800 | 7,110 | 7,103 | 1,325 | -714 B (-9%) |
 | square | 16,801 | 14,151 | 70 | +8,977 B (+115%) |
@@ -27,14 +34,20 @@ Every method that answers all positions without a list of exceptions is kept and
 | --- | --- | ---: | ---: | ---: |
 | lzma of the bitbase | table | 3,341 | 3,341 | 282,600 / 282,600 (est) |
 | net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06) | learned | 3,795 | 4,018 | 611 / 611 |
+| bothtree-0796 | force | 4,129 | 4,136 | 1,166 / 2,335 |
 | net relative3 64 hidden, 4 bit (relative3-h64-b4-s1-l3e-06) | learned | 4,202 | 4,404 | 803 / 803 |
+| bothtree-0806 | force | 4,221 | 4,229 | 1,185 / 2,354 |
+| conctree-0997 | force | 4,250 | 4,258 | 1,161 / 2,335 |
+| conctree-1004 | force | 4,272 | 4,279 | 1,169 / 2,343 |
 | net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l3e-06) | learned | 4,412 | 4,625 | 803 / 803 |
 | net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0) | learned | 4,583 | 4,783 | 323 / 323 |
 | net relative3 24 hidden, 4 bit (relative3-h24-b4-s1-l0) | learned | 4,587 | 4,825 | 323 / 323 |
 | net relative3 96 hidden, 4 bit (relative3-h96-b4-s0-l3e-06) | learned | 4,857 | 5,027 | 1,187 / 1,187 |
 | net relative3 96 hidden, 4 bit (relative3-h96-b4-s1-l3e-06) | learned | 5,129 | 5,355 | 1,187 / 1,187 |
+| enumtree-1132 | force | 5,263 | 5,270 | 812 / 1,235 |
 | net relative 48 hidden, 4 bit (relative-h48-b4-s1-l0) | learned | 5,345 | 5,283 | 509 / 509 |
 | net relative 48 hidden, 4 bit (relative-h48-b4-s0-l0) | learned | 5,371 | 5,309 | 509 / 509 |
+| atomtree-1562 | force | 6,005 | 6,013 | 786 / 1,210 |
 | net relative3 32 hidden, 4 bit (relative3-h32-b4-s1-l0) | learned | 6,081 | 6,283 | 419 / 419 |
 | net relative3 32 hidden, 4 bit (relative3-h32-b4-s0-l0) | learned | 6,090 | 6,417 | 419 / 419 |
 | forcetree-1800 | force | 7,103 | 7,110 | 469 / 1,325 |
@@ -66,13 +79,20 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 
 | | Total bytes | Real bytes | Model | Exceptions | Errors | Max ops |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| bothtree-0256 | 2,569 | 2,640 | 1,587.1 | 981.5 | 870 | 2,367 |
 | forcetree-0256 | 3,390 | 3,577 | 1,142.7 | 2,247.0 | 2,378 | 1,357 |
+| bothtree-0796 | 4,129 | 4,136 | 4,128.8 | 0.0 | 0 | 2,335 |
 | forcetree-0064 | 4,137 | 4,480 | 405.5 | 3,731.2 | 4,505 | 1,355 |
+| bothtree-0806 | 4,221 | 4,229 | 4,221.5 | 0.0 | 0 | 2,354 |
+| conctree-0997 | 4,250 | 4,258 | 4,250.5 | 0.0 | 0 | 2,335 |
+| conctree-1004 | 4,272 | 4,279 | 4,272.0 | 0.0 | 0 | 2,343 |
 | r1-unit-831 | 4,426 | 4,886 | 156.1 | 4,270.4 | 5,363 | 1,259 |
 | r1-trimmed-966 | 4,430 | 4,890 | 138.3 | 4,291.8 | 5,398 | 1,019 |
 | evolved-1024 | 4,459 | 4,920 | 150.3 | 4,308.9 | 5,426 | 959 |
+| enumtree-1132 | 5,263 | 5,270 | 5,262.7 | 0.0 | 0 | 1,235 |
 | evolved-256 | 5,367 | 5,893 | 149.5 | 5,217.8 | 6,977 | 232 |
 | human | 5,639 | 6,207 | 80.4 | 5,558.3 | 7,590 | 273 |
+| atomtree-1562 | 6,005 | 6,013 | 6,005.2 | 0.0 | 0 | 1,210 |
 | forcetree-1800 | 7,103 | 7,110 | 7,102.7 | 0.0 | 0 | 1,325 |
 | square | 14,151 | 16,801 | 15.6 | 14,135.4 | 30,006 | 70 |
 | always_win ★ | 18,914 | 20,718 | 0.8 | 18,912.9 | 54,394 | 32 |
@@ -139,7 +159,7 @@ Tables and learned models are references, not targets: they show how much of a w
 | 64 | 5,681 B (net pairs3 additive, 5 bit) | 18,914 B (always_win) | +13,233 B |
 | 256 | 2,178 B (net relative3 14 hidden, 4 bit) | 5,367 B (evolved-256) | +3,190 B |
 | 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,430 B (r1-trimmed-966) | +2,252 B |
-| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 3,390 B (forcetree-0256) | +1,212 B |
+| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 2,569 B (bothtree-0256) | +391 B |
 
 ★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations are an estimate (see above); lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 

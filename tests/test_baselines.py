@@ -88,3 +88,19 @@ def test_promoted_r1_programs_are_pinned():
     assert g.errors == 2_378 and g.ops_max == 1_357 and g.bytes_total < 3_400
     e = score.score((report.PROGRAMS / "forcetree-1800.dsl").read_text(), task)
     assert e.errors == 0 and e.ops_max == 1_325 and e.bytes_total < 7_824  # exact, below Syzygy
+
+
+def test_enumerated_trees_are_pinned():
+    """scripts/enumerate_concepts.py, 2026-11-26: exact programs and the best at 256 leaves."""
+    task = score.kpk_task()
+    for name in (
+        "bothtree-0796",
+        "bothtree-0806",
+        "conctree-0997",
+        "conctree-1004",
+        "enumtree-1132",
+        "atomtree-1562",
+    ):
+        assert score.score((report.PROGRAMS / f"{name}.dsl").read_text(), task).errors == 0, name
+    b = score.score((report.PROGRAMS / "bothtree-0256.dsl").read_text(), task)
+    assert b.errors == 870 and b.bytes_total < 2_600

@@ -1,6 +1,6 @@
 # KPK: analysis
 
-First pass finished on 2026-11-26 and reviewed the same day; the review (last section) reopened KPK. Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.3 (fingerprint 0b9fbe14c26f9ea3; 0.3 counts the size limit in grammar code instead of characters, every score is unchanged), table sha256 03e81336…
+First pass finished on 2026-11-26, reviewed and run a second time the same day (the last two sections). Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.3 (fingerprint 0b9fbe14c26f9ea3; 0.3 counts the size limit in grammar code instead of characters, every score is unchanged), table sha256 03e81336…
 
 ![Size against compute, KPK](report.png)
 
@@ -10,20 +10,22 @@ Can a short program in the force language, plus the list of positions it gets wr
 
 ## Result
 
-Yes. Six force programs are smaller than the Syzygy file, counted in real bytes, at a comparable number of operations.
+Yes. Every force program except the two one-liners (`square`, `always_win`) is smaller than the Syzygy file in real bytes, and since the second pass (below) one is exact.
 
-| Program | Real bytes | Against Syzygy | Bound (score) | Errors | Operations, mean / max |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `forcetree-0064` | 4,480 | −43% | 4,137 | 4,505 | 498 / 1,355 |
-| `r1-unit-831` | 4,886 | −38% | 4,426 | 5,363 | 403 / 1,259 |
-| `r1-trimmed-966` | 4,890 | −38% | 4,430 | 5,398 | 356 / 1,019 |
-| `evolved-1024` | 4,920 | −37% | 4,459 | 5,426 | 361 / 959 |
-| `evolved-256` | 5,893 | −25% | 5,367 | 6,977 | 202 / 232 |
-| `human` | 6,207 | −21% | 5,639 | 7,590 | 180 / 273 |
-| Syzygy `KPvK.rtbw` | 7,824 | | | 0 | about 983 / 2,122 (estimate) |
+| Program | Real bytes | Against Syzygy | Errors | Operations, mean / max |
+| --- | ---: | ---: | ---: | ---: |
+| `bothtree-0256` | 2,640 | −66% | 870 | 1,197 / 2,367 |
+| `forcetree-0256` | 3,577 | −54% | 2,378 | 500 / 1,357 |
+| `bothtree-0796`, exact | 4,136 | −47% | 0 | 1,166 / 2,335 |
+| `r1-unit-831` | 4,886 | −38% | 5,363 | 403 / 1,259 |
+| `evolved-1024` | 4,920 | −37% | 5,426 | 361 / 959 |
+| `human` | 6,207 | −21% | 7,590 | 180 / 273 |
+| Syzygy `KPvK.rtbw` | 7,824 | | 0 | about 983 / 2,122 (estimate) |
+
+`r1-*` and `evolved-*` were found by the model in run r1, `human` was written by hand; `forcetree-*` and `bothtree-*` are trees over concepts, built without a model (review and second pass below). All programs and every number: [report.md](report.md).
 
 - **Real bytes** are an actual encoding (`src/chess_forces/codec.py`): the program as one mixed-radix integer over its grammar choices, which the tests decode back to the same tree, plus a 2-byte length, and the exceptions as Elias–Fano with a select sample every 256 zeros, so one position can be looked up without unpacking the rest. The real size is about 10% above the bound (grammar code plus log2 C(N, k)); almost all of the difference is the exception list.
-- **Syzygy's operations** are an estimate: `uv run python scripts/syzygy_ops.py` probes every position through python-chess with a counting copy of the decoder and prices each step by hand (`syzygy.json`). In the worst case most of it is Huffman decoding inside a block (97 symbols and 258 length comparisons for one position). The programs' worst cases (959 to 1,259) are below Syzygy's estimated worst case, their means (356 to 403) below half of its mean.
+- **Syzygy's operations** are an estimate: `uv run python scripts/syzygy_ops.py` probes every position through python-chess with a counting copy of the decoder and prices each step by hand (`syzygy.json`). In the worst case most of it is Huffman decoding inside a block (97 symbols and 258 length comparisons for one position). The model's programs need fewer operations than Syzygy's estimate (worst cases 959 to 1,259, means 356 to 403). The tree programs compute all their concepts first and need more: `bothtree-0256` and the exact `bothtree-0796` are at about 1,200 on average and 2,350 at most, a little above Syzygy's estimated worst case.
 - Both sides leave out their decoder: the DSL interpreter for the programs, the probing code for Syzygy. A listed exception is charged 32 operations to look up, an assumption.
 
 ## The references are smaller still
@@ -37,7 +39,7 @@ Yes. Six force programs are smaller than the Syzygy file, counted in real bytes,
 
 A small net needs half the bytes of the best program at a fifth of its worst case, and a general compressor is smaller too if compute is ignored.
 
-Nets can also be exact. 29 nets from the training sweep answer every position with no exception list; all are kept in `nets/` (retrained from the sweep record, checksums identical) and listed in the report. The smallest, relative3 with 48 hidden units, is 4,018 B real (3,795 B score) at 611 operations; the fastest, relative3 with 24 hidden units, is 4,783 B at 323. Both are smaller than Syzygy. No force program within the language's limits is exact (see the review below for one beyond them). KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
+Nets can also be exact. 29 nets from the training sweep answer every position with no exception list; all are kept in `nets/` (retrained from the sweep record, checksums identical) and listed in the report. The smallest, relative3 with 48 hidden units, is 4,018 B real (3,795 B score) at 611 operations; the fastest, relative3 with 24 hidden units, is 4,783 B at 323. Both are smaller than Syzygy. The smallest exact force program, `bothtree-0796` (second pass), is 4,136 B real: larger than the smallest exact net and slower (2,335 operations at most against 611). KPK is so small and regular that a learned table of weights fits it well; being smaller than Syzygy here says more about Syzygy's general file format (headers, block index, one format for every endgame) than about the concepts.
 ## What the programs know
 
 The programs are readable and use textbook ideas: the rule of the square, key squares in front of the pawn, the opposition, the rook-pawn corner, a loose pawn the weak king reaches first, a blockade in front of the pawn, the weak king taking the pawn. `r1-unit-831` is 20 lines; its program part is 156 B, the other 4,270 B (bound) are its 5,363 exceptions. Run r1 combined these ideas compactly; it found no new concept.
@@ -59,8 +61,8 @@ Where the best program is still wrong (`uv run chess-forces score endgames/kpk/p
 
 ## Open in KPK
 
-- No exact force program fits the language's limits. An exact DSL program of 7,110 B exists beyond them (review below), an exact net of 4,018 B; whether the force language has an exact description near the nets' size is not known.
-- The frontier of force programs is not exhausted: the best net is 2,351 B real at 235 operations, half the best program.
+- The smallest exact program (4,136 B) is within 3% of the smallest exact net (4,018 B), but the nets stay ahead below 2,400 B: the best net is 2,351 B real with 530 errors at 235 operations. All tree programs are greedy upper bounds.
+- The tree programs evaluate every concept for every position; computing a concept only where the tree asks for it would cut their operations, by how much is not measured.
 - The lookup of a listed exception is charged 32 operations, an assumption; the Elias–Fano lookup was not counted.
 - Syzygy's operations are an estimate with hand-priced steps, not a measurement of an engine.
 
@@ -81,6 +83,24 @@ Two questions after closing: is there an exact method, and are the 5,363 excepti
 - What held these programs back was a limit on text, not on information: the 256-leaf tree is 1,143 B of grammar code but over 40,000 characters, because nested ifs are deeply indented. Language 0.3 limits programs to 128 KiB of grammar code instead; all of them fit, and `forcetree-0256` (3,577 B real) and the exact `forcetree-1800` (7,110 B real) are promoted. The exact plain tree is kept with the tree baselines (`trees/tree-2926.dsl`).
 - The nets stay ahead for exactness (4,018 B against 7,110 B): a net keeps a fact in a 4-bit weight, the language has to spell it out as a branch. Greedy trees are upper bounds; better concepts or encodings would shrink the programs, by how much is untested.
 
+## Second pass (2026-11-26)
+
+Run after the review, all without a model.
+
+1. **Language 0.3** limits programs by grammar code (128 KiB) instead of characters, so the trees of the review fit: `forcetree-0256` and the exact `forcetree-1800` are promoted; every score is unchanged.
+2. **Concepts by enumeration.** `uv run python scripts/enumerate_concepts.py` builds 30 atoms (files, ranks, the side to move, distances between the kings, the pawn and the squares in front of it, and king walks that avoid the other side's guarded squares) and every comparison of two of them (`a < b`, `a + c < b`, `a + tempo + c < b`, `a == b`): 7,395 comparisons, 5,638 distinct, the 500 most informative kept. Trees over them are written as programs, next to the same trees over the 10 concepts of `r1-unit-831`:
+
+| Features | 256 leaves: errors | real bytes | Exact: leaves | real bytes | Max ops (exact) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| atoms only | 2,723 | 3,818 | 1,562 | 6,013 | 1,210 |
+| atoms + enumerated concepts | 1,502 | 3,014 | 1,132 | 5,270 | 1,235 |
+| atoms + concepts of `r1-unit-831` | 1,511 | 2,939 | 997 | 4,258 | 2,335 |
+| atoms + both | 870 | 2,640 | 796 | 4,136 | 2,335 |
+
+- Enumerated concepts nearly match the model's at 256 leaves (3,014 against 2,939 B) and fall behind for an exact program (5,270 against 4,258 B). Together they are best: 2,640 B with 870 errors, and exact at 4,136 B.
+- The enumerated concepts the tree uses most are familiar chess: the rule of the square (`dist(P, queening square) + 1 < dist(k, queening square)`) and races of the two kings to the squares in front of the pawn, counted as walks around guarded squares. Nothing among the top twelve looks new; that judgment needs a chess player.
+- Promoted: `bothtree-0256` (best in its tier) and every exact program: `bothtree-0796`, `bothtree-0806`, `conctree-0997`, `conctree-1004`, `enumtree-1132`, `atomtree-1562`.
+
 ## Reproduce
 
 ```text
@@ -88,5 +108,6 @@ uv run chess-forces report                                   # report.md, report
 uv run chess-forces score endgames/kpk/programs/r1-unit-831.dsl
 uv run python scripts/syzygy_ops.py                          # syzygy.json, needs ../syzygy
 uv run python scripts/force_trees.py                         # trees over force concepts, written as DSL
+uv run python scripts/enumerate_concepts.py                  # concepts by enumeration, compared with the model's
 uv run pytest                                                # includes the Syzygy check of every position
 ```
