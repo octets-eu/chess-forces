@@ -180,4 +180,4 @@ The search with an AI (`evolve`) costs money and needs an API key; it stops by i
 
 ## How to read the other documents
 
-[STATUS.md](STATUS.md) says what is done and what is next. [01-dsl-concept.md](01-dsl-concept.md) explains the language and the score. [02-agent-loop.md](02-agent-loop.md) explains how the AI searches. [endgames/kpk/report.md](../endgames/kpk/report.md) has all results as a table.
+[STATUS.md](STATUS.md) says what is done and what is next. [01-dsl-concept.md](01-dsl-concept.md) explains the language and the score. [02-agent-loop.md](02-agent-loop.md) explains how the AI searches. [03-concept-loop.md](03-concept-loop.md) proposes asking the AI only for ideas and letting the computer combine them. [endgames/kpk/report.md](../endgames/kpk/report.md) has all results as a table.

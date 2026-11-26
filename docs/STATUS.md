@@ -1,6 +1,6 @@
 # Status and handover (2026-11-26)
 
-Read this first; new to the project? Start with the [beginner's guide](00-beginners-guide.md). Details: [01 DSL concept and results](01-dsl-concept.md), [02 agent loop](02-agent-loop.md), [endgames/kpk/report.md](../endgames/kpk/report.md). Working rules for this machine are kept in a local, unpublished `CLAUDE.md`.
+Read this first; new to the project? Start with the [beginner's guide](00-beginners-guide.md). Details: [01 DSL concept and results](01-dsl-concept.md), [02 agent loop](02-agent-loop.md), [03 concept loop](03-concept-loop.md) (proposed), [endgames/kpk/report.md](../endgames/kpk/report.md). Working rules for this machine are kept in a local, unpublished `CLAUDE.md`.
 
 ## What this is
 
@@ -8,7 +8,7 @@ Find short programs in a small language of "forces on 64 squares" that answer an
 
 ## Goal (2026-11-26)
 
-The target is the Syzygy file of each endgame. KPK is too small to show much: its file is 7.8 KB. The real test is endgames of 5 pieces and more, where Syzygy files are megabytes, for example KRPvKP 4.4 MB, KRPvKR 16.4 MB, KQPvKQ 20.4 MB (`ls -l ../syzygy`). Nets, decision trees and lzma stay on the plot as references, not targets: they show how much of a win comes from the concepts and how much from Syzygy's general file format, and how far a force program might still go. Passing Syzygy is not the end: the search keeps pushing the force-program frontier (bytes against operations) as long as that pays off. Tokens cost money, so with more pieces the spend per endgame needs a rule, for example closing an island when the bytes saved per dollar fall below a set value (concept note 03).
+The target is the Syzygy file of each endgame. KPK is too small to show much: its file is 7.8 KB. The real test is endgames of 5 pieces and more, where Syzygy files are megabytes, for example KRPvKP 4.4 MB, KRPvKR 16.4 MB, KQPvKQ 20.4 MB (`ls -l ../syzygy`). Nets, decision trees and lzma stay on the plot as references, not targets: they show how much of a win comes from the concepts and how much from Syzygy's general file format, and how far a force program might still go. Passing Syzygy is not the end: the search keeps pushing the force-program frontier (bytes against operations) as long as that pays off. Tokens cost money, so with more pieces the spend per endgame needs a rule, for example closing an island when the bytes saved per dollar fall below a set value (concept note 04).
 
 ## Where things stand
 
@@ -56,9 +56,10 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 ## Waiting for the owner
 
 1. Merge the local branches `close-kpk` and `kpk-pass2` into `main`, and push?
-2. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
-3. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
-4. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
+2. [Concept note 03](03-concept-loop.md): concepts by a model, combined by trees, calibrated on KPK; decisions C1–C5. Building it is free, the run needs a budget (proposed 3 USD).
+3. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? A first trial of trimming and review is described there. The paid part (reviewer, grants) needs its own short concept and a cost cap first.
+4. After KPK: one 4-piece endgame first (KRvKP, Syzygy 179 KB, about 12 million positions, about 2 minutes per program; estimate) to test the setup at a real size, or straight to a concept for 5 pieces?
+5. For 5 pieces, where do the tables come from: own rules code (the rule so far, a large job) or read from Syzygy by a tool outside `src/`?
 
 ## Approaches, all kept
 
@@ -71,7 +72,7 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 | Decision trees over simple features | free | reference; exact at 10,672 B | `chess-forces trees`, `scripts/force_trees.py` |
 | Table nets | free (CPU) | reference; 29 exact, smallest 4,018 B real | `nets.py`, `chess-forces train-nets` |
 | Concepts by enumeration (comparisons of 30 force quantities), combined by trees | free | 3,014 B real at 256 leaves; exact 5,270 B | `scripts/enumerate_concepts.py` |
-| Concepts by a model, combined by a tree (with the enumerated ones) | tokens for concepts only | r1's concepts: 2,939 B; with enumerated ones 2,640 B, exact 4,136 B | `scripts/enumerate_concepts.py` |
+| Concepts by a model, combined by a tree (with the enumerated ones) | tokens for concepts only | r1's concepts: 2,939 B; with enumerated ones 2,640 B, exact 4,136 B; a direct concept loop is proposed | `scripts/enumerate_concepts.py`, [03](03-concept-loop.md) |
 | Keep every program, check every tier (soft cap) | free | not built; would have kept program 831 | agreed ideas below |
 
 ## KPK first pass (2026-11-26)
@@ -105,7 +106,7 @@ Open point: whether the review beats the simpler steering in loop v2 is unknown 
 **A search aimed at Syzygy.** Agreed 2026-11-26. Real sizes, Syzygy's operations and a pinned lzma timing are built (above); open:
 
 1. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)).
-2. A concept note 03 for 5 pieces: scoring speed (compile programs to numpy over the whole table or to C, or estimate exceptions from a sample during the search and count exactly only for the best programs), the table source (question 4 above), the brief's scaling test (operations per position against the number of pieces), and the token spend per endgame: when a paid search stops, measured in bytes saved per dollar rather than a fixed number of proposals.
+2. A concept note 04 for 5 pieces: scoring speed (compile programs to numpy over the whole table or to C, or estimate exceptions from a sample during the search and count exactly only for the best programs), the table source (question 5 above), the brief's scaling test (operations per position against the number of pieces), and the token spend per endgame: when a paid search stops, measured in bytes saved per dollar rather than a fixed number of proposals.
 
 ### First try of trimming and review (2026-11-25, 10 rejected programs of run r1)
 
@@ -143,7 +144,8 @@ Order suggested by this: first the free steps (keep everything, check all tiers,
 ## Next steps in order
 
 1. Owner's answers above.
-2. Concept note 03 for 5 pieces (above). The KPK lesson for it: let free trees combine concepts, spend tokens on concepts only, and enumerate as a baseline.
-3. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
-4. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
-5. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
+2. If approved: concept note 03, stronger enumeration first, then the calibration run on KPK.
+3. Concept note 04 for 5 pieces (above). The KPK lesson for it: let free trees combine concepts, spend tokens on concepts only, and enumerate as a baseline.
+4. The next endgame, as the owner decides. Re-scoring the KPK programs on it gives a first transfer result for free.
+5. Paid, only on the new endgame and only after a budget: effort A/B (low against medium, 120 proposals each), then a run.
+6. Later: reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
