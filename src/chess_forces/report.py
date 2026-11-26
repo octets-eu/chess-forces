@@ -231,8 +231,8 @@ def _plot(report: Report, path: Path) -> None:
         "force": ("o", "Force-language programs"),
     }
     exact_label = {
-        "learned": "Exact nets (no exceptions)",
-        "force": "Exact programs (no exceptions)",
+        "learned": "Exact learned references (net, tree)",
+        "force": "Exact force-language programs",
     }
     for kind, (marker, label) in style.items():
         pts = [p for p in report.points if p.kind == kind and p.ops_max is not None]
@@ -316,10 +316,12 @@ def _plot(report: Report, path: Path) -> None:
         "r1-trimmed-966": ("at", 1700, 4700),
         "r1-unit-831": ("at", 1700, 4330),
         "forcetree-0064": ("at", 1700, 3990),
+        "forcetree-0256": ("at", 1700, 3330),
+        "forcetree-1800": ("at", 1700, 6050),
         "lzma of the bitbase": (9, 6, "left"),
-        "Syzygy KPvK.rtbw": (9, -16, "left"),
-        "net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06)": ("at", 1700, 3560),
-        "net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0)": ("at", 330, 3250),
+        "Syzygy KPvK.rtbw": ("at", 2700, 6950),
+        "net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l3e-06)": ("at", 1700, 3650),
+        "net relative3 24 hidden, 4 bit (relative3-h24-b4-s0-l0)": ("at", 330, 3020),
         "net pairs3 additive, 5 bit": None,  # named in the report's table; no room on the plot
         "net relative3 14 hidden, 4 bit": (9, -4, "left"),
     }
@@ -347,8 +349,10 @@ def _plot(report: Report, path: Path) -> None:
     chosen.sort(key=lambda p: (p.name not in labels, p.ops_max))
     for p in chosen:
         text = p.name + (" (operations estimated)" if p.estimated_ops else "")
-        if p in exact_front:  # short: the report's table has the full name and file
+        if p in exact_front and p.name.startswith("net "):  # short; the table has name and file
             text = "exact net, " + p.name.split(" (")[0].split(" ", 2)[2]
+        elif p in exact_front and p.name.startswith("decision tree"):
+            text = "exact " + p.name
         tries = ([labels[p.name]] if p.name in labels else []) + spots
         for spot in tries:
             line = {"arrowstyle": "-", "color": INK_2, "lw": 0.6, "shrinkA": 1, "shrinkB": 4}

@@ -84,3 +84,7 @@ def test_promoted_r1_programs_are_pinned():
     assert u.bytes_total < t.bytes_total < 4_431
     f = score.score((report.PROGRAMS / "forcetree-0064.dsl").read_text(), task)
     assert f.errors == 4_505 and f.ops_max == 1_355 and f.tier == 4096
+    g = score.score((report.PROGRAMS / "forcetree-0256.dsl").read_text(), task)
+    assert g.errors == 2_378 and g.ops_max == 1_357 and g.bytes_total < 3_400
+    e = score.score((report.PROGRAMS / "forcetree-1800.dsl").read_text(), task)
+    assert e.errors == 0 and e.ops_max == 1_325 and e.bytes_total < 7_824  # exact, below Syzygy

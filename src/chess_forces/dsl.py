@@ -17,7 +17,7 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 
-DSL_VERSION = "0.2"
+DSL_VERSION = "0.3"
 INF = 99
 CAP = 4096
 TIERS = (64, 256, 1024, 4096)
@@ -35,9 +35,12 @@ KINDS = ("any", *PIECES)
 DIRS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 ENUMS: dict[str, tuple[str, ...]] = {"Side": SIDES, "Kind": KINDS, "Piece": PIECES, "Dir": DIRS}
 INT_MIN, INT_MAX = -8, 63
-MAX_SOURCE = 40_000
-MAX_NODES = 3_000
-MAX_DEPTH = 60
+# Size is limited by information (grammar code), not by text: layout and names cost nothing (0.3).
+MAX_BITS = 1 << 20  # 128 KiB of grammar code
+# Guards on parsing work only, far above any program within MAX_BITS.
+MAX_SOURCE = 4_000_000
+MAX_NODES = 400_000
+MAX_DEPTH = 100  # nesting of expressions and of if statements
 MAX_BLOCK = 100
 
 
@@ -411,7 +414,7 @@ def fingerprint() -> str:
         "prims": [(p.name, p.args, p.ret, p.cost) for p in _TABLE],
         "special": [IF_COST, LOGIC_COST, LOOP_COST, COUNT_ADD_COST, EXCEPTION_LOOKUP_OPS],
         "enums": ENUMS,
-        "limits": [MAX_SOURCE, MAX_NODES, MAX_DEPTH, MAX_BLOCK],
+        "limits": [MAX_BITS, MAX_SOURCE, MAX_NODES, MAX_DEPTH, MAX_BLOCK],
     }
     return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:16]
 
@@ -560,8 +563,12 @@ class _Parser:
                 self.fail(st, f"returns {e.t}, expected {ret}")
             return e
         if isinstance(st, ast.If):
+            self.depth += 1
+            if self.depth > MAX_DEPTH:
+                self.fail(st, "too deeply nested")
             cond = self.typed(st.test, scope, "Bool")
             then = self.block(st.body, scope, ret)
+            self.depth -= 1
             if st.orelse and rest:
                 self.fail(rest[0], "code after a complete if/else")
             if not st.orelse and not rest:
@@ -631,6 +638,8 @@ class _Parser:
             )
         if isinstance(node, ast.BoolOp):
             op = "and" if isinstance(node.op, ast.And) else "or"
+            if len(node.values) > MAX_BLOCK:
+                self.fail(node, f"more than {MAX_BLOCK} operands in one {op}")
             parts = [self.typed(v, scope, "Bool") for v in node.values]
             out = parts[-1]
             for p in reversed(parts[:-1]):
@@ -688,6 +697,8 @@ class _Parser:
         if name in SUGAR_FUNCTIONS:
             p = PRIMS[name]
             if name in ("min", "max") and len(node.args) > 2:
+                if len(node.args) > MAX_BLOCK:
+                    self.fail(node, f"more than {MAX_BLOCK} operands in one {name}")
                 out = self.typed(node.args[0], scope, "Int")
                 for a in node.args[1:]:
                     self.count(node)
@@ -742,6 +753,13 @@ def parse(source: str) -> Program:
         tree = ast.parse(source)
     except (SyntaxError, ValueError, RecursionError, MemoryError) as e:
         raise DslError(f"syntax: {e}") from None
+    try:
+        return _program(tree)
+    except RecursionError:
+        raise DslError("too deeply nested") from None
+
+
+def _program(tree: ast.Module) -> Program:
     body = [
         n
         for n in tree.body
@@ -780,7 +798,10 @@ def parse(source: str) -> Program:
         tree_body = p.block(fn.body, _Scope(names, counter), ret)
         out.append(Def(params, ret, tree_body, counter[0]))
         defs[fn.name] = (params, ret, i)
-    return Program(tuple(out))
+    program = Program(tuple(out))
+    if size_bits(program) > MAX_BITS:
+        raise DslError(f"program larger than {MAX_BITS // 8:,} bytes of grammar code")
+    return program
 
 
 def _annotation(node, fn) -> str:

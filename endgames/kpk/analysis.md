@@ -1,6 +1,6 @@
 # KPK: analysis
 
-First pass finished on 2026-11-26 and reviewed the same day; the review (last section) reopened KPK. Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.2 (fingerprint acd01c74a7d2eb2c), table sha256 03e81336…
+First pass finished on 2026-11-26 and reviewed the same day; the review (last section) reopened KPK. Numbers come from `uv run chess-forces report` (`report.md`, `report.json`, `report.png` in this folder) unless a line names another command. Language dsl 0.3 (fingerprint 0b9fbe14c26f9ea3; 0.3 counts the size limit in grammar code instead of characters, every score is unchanged), table sha256 03e81336…
 
 ![Size against compute, KPK](report.png)
 
@@ -68,7 +68,7 @@ Where the best program is still wrong (`uv run chess-forces score endgames/kpk/p
 
 Two questions after closing: is there an exact method, and are the 5,363 exceptions of the best program a limit of the language or of the search? `uv run python scripts/force_trees.py` takes the 10 concepts of `r1-unit-831` (blocked, adj, runs, support, reach, blockade, cap, aligned, opp, near), adds the 13 simple features of the tree baselines, grows greedy trees and writes each one as a DSL program; no model is involved.
 
-| Features | Leaves | Errors | Real bytes | Max ops | Fits the language's limits |
+| Features | Leaves | Errors | Real bytes | Max ops | Fits the limits of language 0.2 |
 | --- | ---: | ---: | ---: | ---: | --- |
 | simple only | 2,926 | 0 | 10,672 | 157 | no: source over 40,000 characters |
 | simple + concepts | 64 | 4,505 | 4,480 | 1,355 | yes, promoted as `forcetree-0064` |
@@ -78,7 +78,7 @@ Two questions after closing: is there an exact method, and are the 5,363 excepti
 
 - The language can describe KPK exactly, and with the force concepts the exact program (7,110 B) is smaller than Syzygy at fewer operations than Syzygy's estimate. The concepts carry information: without them the exact tree needs 10,672 B.
 - The 3.2% errors of run r1 were a limit of the search: a greedy tree over r1's own concepts, found in seconds, reaches 3,577 B real with 256 leaves, 27% below `r1-unit-831`.
-- What held these programs back is a limit on text, not on information: the 256-leaf tree is 1,143 B of grammar code but over 40,000 characters, because nested ifs are deeply indented.
+- What held these programs back was a limit on text, not on information: the 256-leaf tree is 1,143 B of grammar code but over 40,000 characters, because nested ifs are deeply indented. Language 0.3 limits programs to 128 KiB of grammar code instead; all of them fit, and `forcetree-0256` (3,577 B real) and the exact `forcetree-1800` (7,110 B real) are promoted. The exact plain tree is kept with the tree baselines (`trees/tree-2926.dsl`).
 - The nets stay ahead for exactness (4,018 B against 7,110 B): a net keeps a fact in a 4-bit weight, the language has to spell it out as a branch. Greedy trees are upper bounds; better concepts or encodings would shrink the programs, by how much is untested.
 
 ## Reproduce

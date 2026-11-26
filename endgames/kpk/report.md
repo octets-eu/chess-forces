@@ -1,6 +1,6 @@
 # KPK report
 
-Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c88c9d7bdbdf7b61c76c666293c0. Language: dsl 0.2 acd01c74a7d2eb2c. Total bytes is the score: program or model size plus exceptions. For programs and learned models both parts are information bounds (grammar code or an adaptive code over the weights, and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word operations, maximum over all positions, with 32 added for an exception lookup whenever there are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate.
+Task: KPK, 165,676 positions, table sha256 03e8133653f26b75f2924bc5b66cb37e6702c88c9d7bdbdf7b61c76c666293c0. Language: dsl 0.3 0b9fbe14c26f9ea3. Total bytes is the score: program or model size plus exceptions. For programs and learned models both parts are information bounds (grammar code or an adaptive code over the weights, and log2 C(N, k)); tables are real files. See docs/01-dsl-concept.md. Operations are 64-bit word operations, maximum over all positions, with 32 added for an exception lookup whenever there are errors. Marked with a dash: operations not measured. Marked (est): a rough estimate.
 
 ## Against the target: Syzygy
 
@@ -8,12 +8,14 @@ The target is the Syzygy file of the endgame, with at most 4,096 operations per 
 
 | Force program | Real bytes | Bound | Max ops | Against Syzygy |
 | --- | ---: | ---: | ---: | ---: |
+| forcetree-0256 | 3,577 | 3,390 | 1,357 | -4,247 B (-54%) |
 | forcetree-0064 | 4,480 | 4,137 | 1,355 | -3,344 B (-43%) |
 | r1-unit-831 | 4,886 | 4,426 | 1,259 | -2,938 B (-38%) |
 | r1-trimmed-966 | 4,890 | 4,430 | 1,019 | -2,934 B (-38%) |
 | evolved-1024 | 4,920 | 4,459 | 959 | -2,904 B (-37%) |
 | evolved-256 | 5,893 | 5,367 | 232 | -1,931 B (-25%) |
 | human | 6,207 | 5,639 | 273 | -1,617 B (-21%) |
+| forcetree-1800 | 7,110 | 7,103 | 1,325 | -714 B (-9%) |
 | square | 16,801 | 14,151 | 70 | +8,977 B (+115%) |
 | always_win | 20,718 | 18,914 | 32 | +12,894 B (+165%) |
 
@@ -35,6 +37,7 @@ Every method that answers all positions without a list of exceptions is kept and
 | net relative 48 hidden, 4 bit (relative-h48-b4-s0-l0) | learned | 5,371 | 5,309 | 509 / 509 |
 | net relative3 32 hidden, 4 bit (relative3-h32-b4-s1-l0) | learned | 6,081 | 6,283 | 419 / 419 |
 | net relative3 32 hidden, 4 bit (relative3-h32-b4-s0-l0) | learned | 6,090 | 6,417 | 419 / 419 |
+| forcetree-1800 | force | 7,103 | 7,110 | 469 / 1,325 |
 | net relative 64 hidden, 4 bit (relative-h64-b4-s0-l0) | learned | 7,121 | 7,267 | 669 / 669 |
 | net relative3 48 hidden, 3 bit (relative3-h48-b3-s0-l0) | learned | 7,123 | 7,978 | 611 / 611 |
 | net relative 64 hidden, 4 bit (relative-h64-b4-s1-l0) | learned | 7,130 | 7,165 | 669 / 669 |
@@ -46,6 +49,7 @@ Every method that answers all positions without a list of exceptions is kept and
 | net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l0) | learned | 9,148 | 9,824 | 611 / 611 |
 | net relative3 64 hidden, 3 bit (relative3-h64-b3-s0-l0) | learned | 9,488 | 10,767 | 803 / 803 |
 | net relative3 64 hidden, 3 bit (relative3-h64-b3-s1-l0) | learned | 9,505 | 10,720 | 803 / 803 |
+| decision tree, 2926 leaves | learned | 10,665 | 10,672 | 111 / 157 |
 | net relative 96 hidden, 4 bit (relative-h96-b4-s0-l0) | learned | 10,668 | 11,139 | 989 / 989 |
 | net relative 96 hidden, 4 bit (relative-h96-b4-s1-l0) | learned | 10,705 | 11,167 | 989 / 989 |
 | net relative3 64 hidden, 4 bit (relative3-h64-b4-s0-l0) | learned | 12,188 | 12,720 | 803 / 803 |
@@ -62,12 +66,14 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 
 | | Total bytes | Real bytes | Model | Exceptions | Errors | Max ops |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| forcetree-0256 | 3,390 | 3,577 | 1,142.7 | 2,247.0 | 2,378 | 1,357 |
 | forcetree-0064 | 4,137 | 4,480 | 405.5 | 3,731.2 | 4,505 | 1,355 |
 | r1-unit-831 | 4,426 | 4,886 | 156.1 | 4,270.4 | 5,363 | 1,259 |
 | r1-trimmed-966 | 4,430 | 4,890 | 138.3 | 4,291.8 | 5,398 | 1,019 |
 | evolved-1024 | 4,459 | 4,920 | 150.3 | 4,308.9 | 5,426 | 959 |
 | evolved-256 | 5,367 | 5,893 | 149.5 | 5,217.8 | 6,977 | 232 |
 | human | 5,639 | 6,207 | 80.4 | 5,558.3 | 7,590 | 273 |
+| forcetree-1800 | 7,103 | 7,110 | 7,102.7 | 0.0 | 0 | 1,325 |
 | square | 14,151 | 16,801 | 15.6 | 14,135.4 | 30,006 | 70 |
 | always_win ★ | 18,914 | 20,718 | 0.8 | 18,912.9 | 54,394 | 32 |
 | net relative3 14 hidden, 4 bit ★ | 2,178 | 2,351 | 1,531.8 | 646.0 | 530 | 235 |
@@ -106,6 +112,7 @@ Total bytes is the bound used for ranking and the plot; real bytes is an actual 
 | net relative3 48 hidden, 4 bit (relative3-h48-b4-s1-l0) | 9,148 | 9,824 | 9,148.2 | 0.0 | 0 | 611 |
 | net relative3 64 hidden, 3 bit (relative3-h64-b3-s0-l0) | 9,488 | 10,767 | 9,487.7 | 0.0 | 0 | 803 |
 | net relative3 64 hidden, 3 bit (relative3-h64-b3-s1-l0) | 9,505 | 10,720 | 9,504.7 | 0.0 | 0 | 803 |
+| decision tree, 2926 leaves | 10,665 | 10,672 | 10,664.6 | 0.0 | 0 | 157 |
 | net relative 96 hidden, 4 bit (relative-h96-b4-s0-l0) | 10,668 | 11,139 | 10,668.2 | 0.0 | 0 | 989 |
 | net relative 96 hidden, 4 bit (relative-h96-b4-s1-l0) | 10,705 | 11,167 | 10,704.5 | 0.0 | 0 | 989 |
 | decision tree, 16 leaves | 11,032 | 12,767 | 81.2 | 10,950.9 | 19,845 | 126 |
@@ -132,7 +139,7 @@ Tables and learned models are references, not targets: they show how much of a w
 | 64 | 5,681 B (net pairs3 additive, 5 bit) | 18,914 B (always_win) | +13,233 B |
 | 256 | 2,178 B (net relative3 14 hidden, 4 bit) | 5,367 B (evolved-256) | +3,190 B |
 | 1,024 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,430 B (r1-trimmed-966) | +2,252 B |
-| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 4,137 B (forcetree-0064) | +1,959 B |
+| 4,096 | 2,178 B (net relative3 14 hidden, 4 bit) | 3,390 B (forcetree-0256) | +1,212 B |
 
 ★ on the frontier of counted points (smallest total bytes at or below that operation count). Tables: Syzygy's operations are an estimate (see above); lzma is one setting, and its operations come from decompression time (rough, and different on every run), because a single position needs the whole file unpacked. Learned baselines are trained on all positions and their exceptions are charged. The decision trees are DSL programs in trees/, retrained only by chess-forces trees. The nets (src/chess_forces/nets.py) look up one row per square or square pair, add the rows and apply a small output layer; weights are integers, stored in nets/ and evaluated exactly, so the numbers do not depend on the machine. Net sizes use an adaptive code over the integer weights. A model may be held decoded (a DSL program and a net are); tables must be read at random. That rule is a choice: unpacked once, the lzma bitbase would need 20 operations too, but 24,576 bytes of memory, against at most a few KB for the nets.
 

@@ -21,7 +21,7 @@ from .dsl import TIERS, Position
 ROOT = Path(__file__).resolve().parents[2]
 SYZYGY_DIR = Path(os.environ.get("SYZYGY_PATH", ROOT.parent / "syzygy"))
 TREES_DIR = endgames.KPK.trees
-TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128)
+TREE_LEAVES = (2, 4, 8, 16, 32, 64, 96, 128, None)  # None: grown until every position is right
 SYZYGY_NAME = "Syzygy KPvK.rtbw"
 # Decompressing the lzma bitbase (3,341 B to 24,576 B) with Python's lzma: median of 200 runs on an
 # Apple M4 Pro, 2026-11-26. Pinned so the report does not change from run to run; an estimate.
@@ -230,12 +230,13 @@ def train_trees(task: score.Task, leaves=TREE_LEAVES, seed: int = 0) -> dict[int
     x = feature_matrix(task)
     y = np.array(task.truth)
     out = {}
-    for n in leaves:
-        tree = DecisionTreeClassifier(max_leaf_nodes=n, criterion="entropy", random_state=seed).fit(
-            x, y
-        )
+    for leaves_wanted in leaves:
+        tree = DecisionTreeClassifier(
+            max_leaf_nodes=leaves_wanted, criterion="entropy", random_state=seed
+        ).fit(x, y)
+        n = tree.get_n_leaves()
         doc = (
-            f"Decision tree, {n} leaves: scikit-learn DecisionTreeClassifier(max_leaf_nodes={n}, "
+            f"Decision tree, {n} leaves: scikit-learn DecisionTreeClassifier(max_leaf_nodes={leaves_wanted}, "
             f'criterion="entropy", random_state={seed}) on all positions, written by '
             "chess-forces trees. Learned, not a force program."
         )

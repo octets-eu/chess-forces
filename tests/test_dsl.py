@@ -279,8 +279,8 @@ REJECTED = [
     (W + "count(s for s in occ)\n", "condition"),
     (W + "sq(1)\n", "2 arguments"),
     (W + "all(True for s in occ)\n", "unknown function"),
-    (W + "abs(" * 70 + "1" + ")" * 70 + " == 1\n", "deeply nested"),
-    (W + " and ".join(["True"] * 4000) + "\n", "too large"),
+    (W + "abs(" * 150 + "1" + ")" * 150 + " == 1\n", "deeply nested"),
+    (W + " and ".join(["True"] * 4000) + "\n", "operands"),
     ("import os\ndef wins() -> Bool:\n    return True\n", "list of def"),
     ("def wins() -> Bool:\n    import os\n    return True\n", "Import"),
     ("def wins() -> Bool:\n    while True:\n        pass\n    return True\n", "While"),
@@ -303,7 +303,7 @@ REJECTED = [
         + "    return True\n",
         "statements",
     ),
-    ("x" * 50_000, "longer than"),
+    ("x" * 4_000_001, "longer than"),
     ("def wins() -> Bool:\n    return (\n", "syntax"),
 ]
 
@@ -347,12 +347,21 @@ def test_naming_a_repeated_part_saves_bits():
     assert bits("tempo == 1") == bits("tempo == 63")
 
 
+def test_size_is_limited_by_grammar_code(monkeypatch):
+    """0.3: the limit counts bits of grammar code; text layout costs nothing."""
+    text = "def wins() -> Bool:\n    return K == k\n"
+    assert dsl.size_bits(dsl.parse(text)) > 8
+    monkeypatch.setattr(dsl, "MAX_BITS", 8)
+    with pytest.raises(DslError, match="grammar code"):
+        dsl.parse(text)
+
+
 def test_fingerprint_is_pinned():
     """If this fails the language changed: bump DSL_VERSION, rescore everything, then update the pin."""
     assert dsl.fingerprint() == PINNED
 
 
-PINNED = "acd01c74a7d2eb2c"
+PINNED = "0b9fbe14c26f9ea3"
 
 
 # --- fuzz ----------------------------------------------------------------------------------------
@@ -456,7 +465,10 @@ def test_fuzz_round_trip_and_evaluation():
         try:
             again = dsl.parse(text)
         except DslError as e:
-            assert any(w in str(e) for w in ("too large", "nested", "longer", "statements")), (
+            assert any(
+                w in str(e)
+                for w in ("too large", "nested", "longer", "statements", "operands", "grammar code")
+            ), (
                 str(e),
                 text,
             )
