@@ -53,7 +53,7 @@ uv run chess-forces evolve --run r2 --usd 3   # needs the API key and the owner'
 
 ## Decisions taken
 
-D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a dev dependency; grammar code for size; log2 C(N, k) for exceptions; operation tiers 64, 256, 1,024, 4,096; default budget 20 per day, scripts stop and resume, only the owner raises limits; funsearch is not copied, its island and cluster idea may be adapted later (Apache-2.0). On 2026-11-26: keep every promising approach and block nothing that might help beyond the current endgame; a finished endgame is reviewed and may be run again. Also on 2026-11-26: the next endgame is KQvKP, built as concept note 04 proposes (L1 language 0.4 with `man(side, kind)`, S1 scale plan, B1 paid run only after a saturated pool, cap 3 USD; approved); tables come from our own enumeration of positions with results read from Syzygy, KPK's own generator as the check (T1); the 50-move rule is ignored from KQvKP on as a listed exception (E1). Also on 2026-11-26: the target is the Syzygy file of each endgame within the 4,096-operation cap; nets, trees and lzma are references; no paid search on KPK; KPK closes with a written analysis; endgames of 5 pieces and more are the real test.
+D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a dev dependency; grammar code for size; log2 C(N, k) for exceptions; operation tiers 64, 256, 1,024, 4,096; default budget 20 per day, scripts stop and resume, only the owner raises limits; funsearch is not copied, its island and cluster idea may be adapted later (Apache-2.0). On 2026-11-26: keep every promising approach and block nothing that might help beyond the current endgame; a finished endgame is reviewed and may be run again. Also on 2026-11-26: the next endgame is KQvKP, built as concept note 04 proposes (L1 language 0.4 with `man(side, kind)`, S1 scale plan, B1 paid run only after a saturated pool, cap 3 USD; approved); tables come from our own enumeration of positions with results read from Syzygy, KPK's own generator as the check (T1); the 50-move rule is ignored from KQvKP on as a listed exception (E1). Also on 2026-11-26: the target is the Syzygy file of each endgame within the 4,096-operation cap; nets, trees and lzma are references; no paid search on KPK; KPK closes with a written analysis; endgames of 5 pieces and more are the real test. On 2026-11-28, added to note 04 and agreed: Syzygy measured with the tables its probe reads and its capture search (F1), our own tree builder pruned by bytes (S2), quantities computed where the tree needs them (O1), KQvKP tests on a sample (Q1), prompts aimed at Syzygy (L1), the smoke test with and without themes and the free soft cap before a paid program search (B1).
 
 ## Open exceptions to the rules of chess
 
@@ -61,7 +61,7 @@ D1–D5 of the concept note; own rules code; licence MIT; python-chess only as a
 
 ## Waiting for the owner
 
-1. Build the free part of the soft-cap design below (keep everything, check every tier, tolerant frontier, local trimming)? The paid part (reviewer, grants) needs its own short concept and a cost cap first.
+1. The paid part of the soft-cap design below (reviewer, grants) needs its own short concept and a cost cap. Its free part (keep everything, check every tier, tolerant frontier, local trimming) is agreed as a step before any paid program search (note 04, B1, 2026-11-28).
 
 ## Approaches, all kept
 
@@ -108,7 +108,7 @@ Open point: whether the review beats the simpler steering in loop v2 is unknown 
 
 **A search aimed at Syzygy.** Agreed 2026-11-26. Real sizes, Syzygy's operations and a pinned lzma timing are built (above); open:
 
-1. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)).
+1. The search prompt shows the best force program of the tier (to improve) and the endgame's Syzygy size (to pass); the best reference of the tier may be shown as a hint of what is possible, not as the bar (today the nets are the bar: `search.Bars`, [02](02-agent-loop.md)). Part of L1 in note 04 since 2026-11-28.
 2. Concept note 04 for KQvKP is written ([04](04-kqkp.md)); its scale plan and test plan carry the earlier points (scoring speed, trees in 24 GB, a saturated pool, the token spend per endgame). Still open for later endgames: the brief's scaling test (operations per position against the number of pieces).
 
 ### First try of trimming and review (2026-11-25, 10 rejected programs of run r1)
@@ -151,9 +151,10 @@ Start of the next session: build [concept note 04](04-kqkp.md) (all decisions ta
 
 1. **T1, positions:** a general enumeration of legal positions for a set of men in `src/` (symmetries, legality, both sides to move); it must reproduce KPK's 165,676 positions.
 2. **T1, results:** a script outside `src/` that probes Syzygy in parallel and writes the table locally with its sha256 (the local pilot `state/scripts/kqkp_gen.py` shows the probing); cross-check: the extracted KPK table equals our own generator's. It records cursed wins and blessed losses separately (**E1**: counted as wins and losses, the count shown in every report).
-3. **L1, language 0.4:** `man(side, kind)`, a KQvKP task, prompts with a description per endgame; fingerprint pinned anew, every score unchanged.
-4. **The KQvKP folder and report:** `endgames/kqkp/`, references (lzma, Syzygy with `scripts/syzygy_ops.py` generalised, decision trees, nets), the E1 count.
-5. **S1, scale:** parallel scoring and quantities, at most about 200 features per tree.
-6. **Concept pool on KQvKP** (queen quantities), then saturation until extra comparisons stop helping.
-7. **B1:** a smoke test of model concepts against the saturated pool; the paid run (cap 3 USD) only if they clearly beat enumerated ones.
-8. Later: E1 resolved (a target under the 50-move rule), 5-piece endgames, the brief's scaling test, reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
+3. **L1, language 0.4:** `man(side, kind)`, a KQvKP task, prompts per endgame that show Syzygy's size and the best force program, no KPK numbers in the code; fingerprint pinned anew, every score unchanged.
+4. **The KQvKP folder and report:** `endgames/kqkp/`, references (lzma; Syzygy as **F1**, the file and the tables its probe reads, `scripts/syzygy_ops.py` generalised with the capture search; decision trees; nets), the E1 count.
+5. **S1, scale, and Q1:** parallel scoring and quantities; KQvKP programs tested on a fixed sample, full scores in the report.
+6. **S2 and O1, trees:** our own tree builder (one byte per atom, one bit per comparison, pruned by bytes) and quantities computed where a path needs them; both checked on KPK first.
+7. **Concept pool on KQvKP** (queen quantities), then saturation until extra comparisons stop helping.
+8. **B1:** a smoke test of model concepts against the saturated pool, half with KQvKP themes and half without; the paid run (cap 3 USD) only if they clearly beat enumerated ones; a paid program search only after the free part of the soft cap.
+9. Later: E1 resolved (a target under the 50-move rule), an evaluator that scores all positions at once (numpy arrays of 64-bit boards, operations counted per position, the same values and counts as the interpreter on KPK; its own concept note, before 5-piece endgames), 5-piece endgames, the brief's scaling test, reflector, migration between islands, Batch API, a 7x7 board or an invented piece.
